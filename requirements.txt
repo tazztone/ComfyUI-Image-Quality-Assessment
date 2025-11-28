@@ -1,0 +1,4 @@
+pyiqa
+opencv-python
+torch
+torchvision
