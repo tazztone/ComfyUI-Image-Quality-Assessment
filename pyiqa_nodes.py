@@ -2,6 +2,7 @@ import torch
 import numpy as np
 import sys
 from .iqa_core import get_model_cache, aggregate_scores, get_hash, ModelLoadError, InferenceError
+from .comfy_compat import io
 
 # Safe import for pyiqa
 try:
@@ -32,22 +33,11 @@ class PyIQA_Base:
 
     def _cleanup(self, metric, device, keep_model_loaded):
         # The cache handles cleanup automatically if max size is reached.
-        # But if keep_model_loaded is False, we should explicitly remove it?
-        # The prompt implies keep_model_loaded means "persist across executions".
-        # If it's False, we probably shouldn't cache it at all, or remove it now.
-        if not keep_model_loaded:
-            # We don't remove from cache if it wasn't put there.
-            # But if it was, we might want to remove it?
-            # Actually, if keep_model_loaded is False, we just didn't put it in cache?
-            # Wait, my logic above only PUTS if keep_model_loaded.
-            # So if keep_model_loaded is False, iqa_model is just a local var and will be GC'd.
-            # BUT, we might have fetched it from cache (if it was previously loaded with keep=True).
-            # If so, do we unload it? Probably not, user might want to keep it if it was already there.
-            pass
+        pass
 
-class PyIQA_NoReferenceNode(PyIQA_Base):
+class PyIQA_NoReferenceNode(io.ComfyNode, PyIQA_Base):
     @classmethod
-    def INPUT_TYPES(s):
+    def define_schema(cls):
         # Common NR metrics from research
         metrics = [
             "hyperiqa", "musique", "nima", "brisque", "clip_score", "niqe", "piqe",
@@ -65,36 +55,42 @@ class PyIQA_NoReferenceNode(PyIQA_Base):
             except:
                 pass
 
-        # Filter metrics that might fail or are not suitable if needed, but let's keep all.
-
-        return {
-            "required": {
-                "image": ("IMAGE",),
-                "metric": (metrics, {"default": "hyperiqa"}),
-                "device": (["cuda", "cpu", "auto"], {"default": "auto"}),
-                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
-                "keep_model_loaded": ("BOOLEAN", {"default": True}),
-            }
-        }
-
-    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
-    RETURN_NAMES = ("score", "score_text", "raw_scores")
-    FUNCTION = "process"
-    CATEGORY = "IQA/PyIQA"
+        return io.Schema(
+            node_id="PyIQA_NoReferenceNode",
+            display_name="IQA: PyIQA No-Reference",
+            category="IQA/PyIQA",
+            inputs=[
+                io.Image.Input("image"),
+                io.Enum.Input("metric", metrics, default="hyperiqa"),
+                io.Enum.Input("device", ["cuda", "cpu", "auto"], default="auto"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Boolean.Input("keep_model_loaded", default=True),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Float.Output("raw_scores")
+            ]
+        )
 
     @classmethod
-    def IS_CHANGED(s, metric, device, keep_model_loaded, **kwargs):
+    def IS_CHANGED(cls, metric, device, keep_model_loaded, **kwargs):
         # Returns hash of parameters to control caching.
         # If parameters change, we rerun.
         return get_hash({"metric": metric, "device": device, "keep": keep_model_loaded})
 
     @classmethod
-    def VALIDATE_INPUTS(s, image, metric, device, aggregation, **kwargs):
+    def VALIDATE_INPUTS(cls, image, metric, device, aggregation, **kwargs):
         if not PYIQA_AVAILABLE: return "PyIQA library not installed"
         if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
-    def process(self, image, metric, device, aggregation, keep_model_loaded):
+    @classmethod
+    def execute(cls, image, metric, device, aggregation, keep_model_loaded):
+        instance = cls() # Create instance to use helper methods
+        return instance.process_instance(image, metric, device, aggregation, keep_model_loaded)
+
+    def process_instance(self, image, metric, device, aggregation, keep_model_loaded):
         if not PYIQA_AVAILABLE:
              raise ModelLoadError("PyIQA library is not installed.")
 
@@ -104,20 +100,9 @@ class PyIQA_NoReferenceNode(PyIQA_Base):
              # Return dummy or raise? ComfyUI handles exceptions by showing red node.
              raise e
 
-        # Handle potential "face_iqa" mapping if needed (PyIQA uses 'topiq_nr-face')
-        # But assuming user selected from the list which includes the correct names or we mapped them?
-        # 'face_iqa' isn't a direct model name in PyIQA usually, it's 'topiq_nr-face'.
-        # Let's map it if the user selected 'face_iqa' but it's not in pyiqa models.
-        # But wait, I added 'face_iqa' to the list. I should check if it needs mapping.
-        # Based on docs: "Face IQA topiq_nr-face".
         if metric == "face_iqa":
-            # This might fail if the model name is actually topiq_nr-face.
-            # I should rely on what `pyiqa.list_models()` returns or what `create_metric` accepts.
-            # If `face_iqa` fails, I'll let it fail or I should have used the real name.
-            # For now, I'll assume the string passed to create_metric must be valid.
             pass
 
-        # Ensure image is on device
         dist_tensor = image.permute(0, 3, 1, 2).to(device)
 
         scores = []
@@ -125,14 +110,12 @@ class PyIQA_NoReferenceNode(PyIQA_Base):
             with torch.no_grad():
                 raw_score = iqa_model(dist_tensor)
 
-                # Check output format
                 if isinstance(raw_score, torch.Tensor):
                     if raw_score.dim() == 0:
                         scores = [raw_score.item()] * dist_tensor.shape[0]
                     else:
                         scores = raw_score.flatten().cpu().tolist()
                 else:
-                    # Some metrics might return a scalar float directly?
                     scores = [float(raw_score)] * dist_tensor.shape[0]
 
         except Exception as e:
@@ -143,17 +126,14 @@ class PyIQA_NoReferenceNode(PyIQA_Base):
         final_score = aggregate_scores(scores, aggregation)
         score_text = f"{metric} ({aggregation}): {final_score:.4f}"
 
-        # If we need to return scores as a list for downstream logic nodes, we just pass the list.
-        # However, ComfyUI usually expects Tensor or standard types.
-        # But Python list works if downstream node accepts generic input.
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores)
         }
 
-class PyIQA_FullReferenceNode(PyIQA_Base):
+class PyIQA_FullReferenceNode(io.ComfyNode, PyIQA_Base):
     @classmethod
-    def INPUT_TYPES(s):
+    def define_schema(cls):
         # Common FR metrics
         metrics = [
             "lpips", "fid", "ssim", "psnr", "ms_ssim", "dists", "fsim", "vif",
@@ -170,40 +150,42 @@ class PyIQA_FullReferenceNode(PyIQA_Base):
             except:
                 pass
 
-        return {
-            "required": {
-                "distorted_image": ("IMAGE",),
-                "reference_image": ("IMAGE",),
-                "metric": (metrics, {"default": "lpips"}),
-                "device": (["cuda", "cpu", "auto"], {"default": "auto"}),
-                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
-                "keep_model_loaded": ("BOOLEAN", {"default": True}),
-            }
-        }
-
-    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
-    RETURN_NAMES = ("score", "score_text", "raw_scores")
-    FUNCTION = "process"
-    CATEGORY = "IQA/PyIQA"
+        return io.Schema(
+            node_id="PyIQA_FullReferenceNode",
+            display_name="IQA: PyIQA Full-Reference",
+            category="IQA/PyIQA",
+            inputs=[
+                io.Image.Input("distorted_image"),
+                io.Image.Input("reference_image"),
+                io.Enum.Input("metric", metrics, default="lpips"),
+                io.Enum.Input("device", ["cuda", "cpu", "auto"], default="auto"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Boolean.Input("keep_model_loaded", default=True),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Float.Output("raw_scores")
+            ]
+        )
 
     @classmethod
-    def IS_CHANGED(s, metric, device, keep_model_loaded, **kwargs):
+    def IS_CHANGED(cls, metric, device, keep_model_loaded, **kwargs):
         return get_hash({"metric": metric, "device": device, "keep": keep_model_loaded})
 
     @classmethod
-    def VALIDATE_INPUTS(s, distorted_image, reference_image, metric, device, aggregation, **kwargs):
+    def VALIDATE_INPUTS(cls, distorted_image, reference_image, metric, device, aggregation, **kwargs):
         if not PYIQA_AVAILABLE: return "PyIQA library not installed"
-
-        # Check shapes
         if distorted_image.shape[0] != reference_image.shape[0] and reference_image.shape[0] != 1:
             return "Batch size mismatch. Reference must be batch size 1 or match distorted image."
-
-        # Check dimensions? Resizing is handled in process but good to warn?
-        # We'll handle it in process.
-
         return True
 
-    def process(self, distorted_image, reference_image, metric, device, aggregation, keep_model_loaded):
+    @classmethod
+    def execute(cls, distorted_image, reference_image, metric, device, aggregation, keep_model_loaded):
+        instance = cls()
+        return instance.process_instance(distorted_image, reference_image, metric, device, aggregation, keep_model_loaded)
+
+    def process_instance(self, distorted_image, reference_image, metric, device, aggregation, keep_model_loaded):
         if not PYIQA_AVAILABLE:
              raise ModelLoadError("PyIQA library is not installed.")
 
@@ -243,5 +225,5 @@ class PyIQA_FullReferenceNode(PyIQA_Base):
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores)
         }

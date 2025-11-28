@@ -4,40 +4,45 @@ import torch
 import math
 import skimage.restoration
 from .iqa_core import aggregate_scores, tensor_to_numpy, get_hash, InferenceError
+from .comfy_compat import io
 
-class IQA_Blur_Estimation:
+class IQA_Blur_Estimation(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "image": ("IMAGE",),
-                "mode": (["laplacian", "tenengrad"], {"default": "laplacian"}),
-                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
-            }
-        }
-
-    RETURN_TYPES = ("FLOAT", "STRING", "IMAGE", "FLOAT")
-    RETURN_NAMES = ("score", "score_text", "blur_map", "raw_scores")
-    FUNCTION = "analyze"
-    CATEGORY = "IQA/OpenCV"
+    def define_schema(cls):
+        return io.Schema(
+            node_id="IQA_Blur_Estimation",
+            display_name="IQA: Blur Estimation (OpenCV)",
+            category="IQA/OpenCV",
+            inputs=[
+                io.Image.Input("image"),
+                io.Enum.Input("mode", ["laplacian", "tenengrad"], default="laplacian"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Image.Output("blur_map"),
+                io.Float.Output("raw_scores")
+            ]
+        )
 
     @classmethod
-    def IS_CHANGED(s, mode, aggregation, **kwargs):
+    def IS_CHANGED(cls, mode, aggregation, **kwargs):
         return get_hash([mode, aggregation])
 
     @classmethod
-    def VALIDATE_INPUTS(s, image, mode, aggregation):
+    def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
         if image is None: return "Image input is missing."
         if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation method: {aggregation}"
         if mode not in ["laplacian", "tenengrad"]: return f"Invalid mode: {mode}"
         return True
 
-    def analyze(self, image, mode, aggregation):
+    @classmethod
+    def execute(cls, image, mode, aggregation):
         scores = []
         maps = []
 
         try:
-            # Convert whole batch at once if possible or iterate
             img_list = tensor_to_numpy(image)
 
             for img_np in img_list:
@@ -90,36 +95,40 @@ class IQA_Blur_Estimation:
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, maps_out, scores)
+            "result": io.NodeOutput(final_score, score_text, maps_out, scores)
         }
 
-class IQA_Brightness_Contrast:
+class IQA_Brightness_Contrast(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "image": ("IMAGE",),
-                "mode": (["brightness", "contrast", "exposure_score"], {"default": "brightness"}),
-                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
-            }
-        }
-
-    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
-    RETURN_NAMES = ("score", "score_text", "raw_scores")
-    FUNCTION = "analyze"
-    CATEGORY = "IQA/OpenCV"
+    def define_schema(cls):
+        return io.Schema(
+            node_id="IQA_Brightness_Contrast",
+            display_name="IQA: Brightness & Contrast (OpenCV)",
+            category="IQA/OpenCV",
+            inputs=[
+                io.Image.Input("image"),
+                io.Enum.Input("mode", ["brightness", "contrast", "exposure_score"], default="brightness"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Float.Output("raw_scores")
+            ]
+        )
 
     @classmethod
-    def IS_CHANGED(s, mode, aggregation, **kwargs):
+    def IS_CHANGED(cls, mode, aggregation, **kwargs):
         return get_hash([mode, aggregation])
 
     @classmethod
-    def VALIDATE_INPUTS(s, image, mode, aggregation):
+    def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
         if image is None: return "Image input is missing."
         if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation method: {aggregation}"
         return True
 
-    def analyze(self, image, mode, aggregation):
+    @classmethod
+    def execute(cls, image, mode, aggregation):
         scores = []
         try:
             img_list = tensor_to_numpy(image)
@@ -157,35 +166,39 @@ class IQA_Brightness_Contrast:
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores)
         }
 
-class IQA_Colorfulness:
+class IQA_Colorfulness(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "image": ("IMAGE",),
-                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
-            }
-        }
-
-    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
-    RETURN_NAMES = ("score", "score_text", "raw_scores")
-    FUNCTION = "analyze"
-    CATEGORY = "IQA/OpenCV"
+    def define_schema(cls):
+        return io.Schema(
+            node_id="IQA_Colorfulness",
+            display_name="IQA: Colorfulness (OpenCV)",
+            category="IQA/OpenCV",
+            inputs=[
+                io.Image.Input("image"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Float.Output("raw_scores")
+            ]
+        )
 
     @classmethod
-    def IS_CHANGED(s, aggregation, **kwargs):
+    def IS_CHANGED(cls, aggregation, **kwargs):
         return get_hash([aggregation])
 
     @classmethod
-    def VALIDATE_INPUTS(s, image, aggregation):
+    def VALIDATE_INPUTS(cls, image, aggregation, **kwargs):
         if image is None: return "Image input is missing."
         if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
-    def analyze(self, image, aggregation):
+    @classmethod
+    def execute(cls, image, aggregation):
         scores = []
         try:
             img_list = tensor_to_numpy(image)
@@ -209,35 +222,39 @@ class IQA_Colorfulness:
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores)
         }
 
-class IQA_Noise_Estimation:
+class IQA_Noise_Estimation(io.ComfyNode):
     @classmethod
-    def INPUT_TYPES(s):
-        return {
-            "required": {
-                "image": ("IMAGE",),
-                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
-            }
-        }
-
-    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
-    RETURN_NAMES = ("score", "score_text", "raw_scores")
-    FUNCTION = "analyze"
-    CATEGORY = "IQA/OpenCV"
+    def define_schema(cls):
+        return io.Schema(
+            node_id="IQA_Noise_Estimation",
+            display_name="IQA: Noise Estimation (OpenCV)",
+            category="IQA/OpenCV",
+            inputs=[
+                io.Image.Input("image"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Float.Output("raw_scores")
+            ]
+        )
 
     @classmethod
-    def IS_CHANGED(s, aggregation, **kwargs):
+    def IS_CHANGED(cls, aggregation, **kwargs):
         return get_hash([aggregation])
 
     @classmethod
-    def VALIDATE_INPUTS(s, image, aggregation):
+    def VALIDATE_INPUTS(cls, image, aggregation, **kwargs):
         if image is None: return "Image input is missing."
         if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
-    def analyze(self, image, aggregation):
+    @classmethod
+    def execute(cls, image, aggregation):
         scores = []
         try:
             img_list = tensor_to_numpy(image)
@@ -262,5 +279,5 @@ class IQA_Noise_Estimation:
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores)
         }
