@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
 import torch
-from .iqa_utils import aggregate_scores
+import math
+import skimage.restoration
+from .iqa_core import aggregate_scores, tensor_to_numpy, get_hash, InferenceError
 
 class IQA_Blur_Estimation:
     @classmethod
@@ -9,65 +11,78 @@ class IQA_Blur_Estimation:
         return {
             "required": {
                 "image": ("IMAGE",),
+                "mode": (["laplacian", "tenengrad"], {"default": "laplacian"}),
                 "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
             }
         }
 
-    RETURN_TYPES = ("FLOAT", "STRING", "IMAGE")
-    RETURN_NAMES = ("score", "score_text", "blur_map")
+    RETURN_TYPES = ("FLOAT", "STRING", "IMAGE", "FLOAT")
+    RETURN_NAMES = ("score", "score_text", "blur_map", "raw_scores")
     FUNCTION = "analyze"
     CATEGORY = "IQA/OpenCV"
 
     @classmethod
-    def VALIDATE_INPUTS(s, image, aggregation):
-        if image is None:
-            return "Image input is missing."
-        if not isinstance(image, torch.Tensor):
-            return "Input must be a tensor."
-        if aggregation not in ["mean", "min", "max", "first"]:
-            return f"Invalid aggregation method: {aggregation}"
+    def IS_CHANGED(s, mode, aggregation, **kwargs):
+        return get_hash([mode, aggregation])
+
+    @classmethod
+    def VALIDATE_INPUTS(s, image, mode, aggregation):
+        if image is None: return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation method: {aggregation}"
+        if mode not in ["laplacian", "tenengrad"]: return f"Invalid mode: {mode}"
         return True
 
-    def analyze(self, image, aggregation):
+    def analyze(self, image, mode, aggregation):
         scores = []
         maps = []
 
         try:
-            for i in range(image.shape[0]):
-                img_tensor = image[i]
-                img_np = 255. * img_tensor.cpu().numpy()
-                img_np = np.clip(img_np, 0, 255).astype(np.uint8)
+            # Convert whole batch at once if possible or iterate
+            img_list = tensor_to_numpy(image)
+
+            for img_np in img_list:
                 img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
                 img_gray = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2GRAY)
 
-                # Variance of Laplacian
-                laplacian = cv2.Laplacian(img_gray, cv2.CV_64F)
-                score = laplacian.var()
+                score = 0.0
+                heatmap = None
+
+                if mode == "laplacian":
+                    # Variance of Laplacian
+                    laplacian = cv2.Laplacian(img_gray, cv2.CV_64F)
+                    score = laplacian.var()
+
+                    # Map
+                    lap_abs = np.absolute(laplacian)
+                    lap_norm = cv2.normalize(lap_abs, None, 0, 255, cv2.NORM_MINMAX)
+                    lap_norm = lap_norm.astype(np.uint8)
+                    heatmap = cv2.applyColorMap(lap_norm, cv2.COLORMAP_JET)
+
+                elif mode == "tenengrad":
+                    # Gradient magnitude (Sobel)
+                    gx = cv2.Sobel(img_gray, cv2.CV_64F, 1, 0, ksize=3)
+                    gy = cv2.Sobel(img_gray, cv2.CV_64F, 0, 1, ksize=3)
+                    magnitude = np.sqrt(gx**2 + gy**2)
+                    score = np.mean(magnitude) # Average gradient magnitude
+
+                    # Map
+                    mag_norm = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
+                    mag_norm = mag_norm.astype(np.uint8)
+                    heatmap = cv2.applyColorMap(mag_norm, cv2.COLORMAP_JET)
+
                 scores.append(score)
 
-                # Create visualization map
-                # Normalize laplacian absolute values to 0-1 range for visualization
-                lap_abs = np.absolute(laplacian)
-                lap_norm = cv2.normalize(lap_abs, None, 0, 255, cv2.NORM_MINMAX)
-                lap_norm = lap_norm.astype(np.uint8)
-
-                # Apply heatmap (JET is common for magnitude)
-                heatmap = cv2.applyColorMap(lap_norm, cv2.COLORMAP_JET)
+                # Convert heatmap BGR -> RGB -> Tensor
                 heatmap = cv2.cvtColor(heatmap, cv2.COLOR_BGR2RGB)
-
-                # Convert back to tensor [H, W, C] -> [1, H, W, C]
                 map_tensor = torch.from_numpy(heatmap.astype(np.float32) / 255.0)
                 maps.append(map_tensor)
+
         except Exception as e:
-            # More specific error handling could be done if we knew potential cv2 errors
-            error_msg = f"Error during blur estimation analysis: {str(e)}"
-            print(error_msg)
-            return {"ui": {"text": [error_msg]}, "result": (0.0, error_msg, torch.zeros_like(image))}
+            raise InferenceError(f"Blur estimation failed: {str(e)}")
 
         final_score = aggregate_scores(scores, aggregation)
-        score_text = f"Blur (Laplacian) {aggregation}: {final_score:.2f}"
+        score_text = f"Blur ({mode.capitalize()}) {aggregation}: {final_score:.2f}"
 
-        # Stack maps
         if maps:
             maps_out = torch.stack(maps)
         else:
@@ -75,7 +90,7 @@ class IQA_Blur_Estimation:
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text, maps_out)
+            "result": (final_score, score_text, maps_out, scores)
         }
 
 class IQA_Brightness_Contrast:
@@ -84,54 +99,65 @@ class IQA_Brightness_Contrast:
         return {
             "required": {
                 "image": ("IMAGE",),
-                "mode": (["brightness", "contrast"],),
+                "mode": (["brightness", "contrast", "exposure_score"], {"default": "brightness"}),
                 "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
             }
         }
 
-    RETURN_TYPES = ("FLOAT", "STRING")
-    RETURN_NAMES = ("score", "score_text")
+    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
+    RETURN_NAMES = ("score", "score_text", "raw_scores")
     FUNCTION = "analyze"
     CATEGORY = "IQA/OpenCV"
 
     @classmethod
+    def IS_CHANGED(s, mode, aggregation, **kwargs):
+        return get_hash([mode, aggregation])
+
+    @classmethod
     def VALIDATE_INPUTS(s, image, mode, aggregation):
-        if image is None:
-            return "Image input is missing."
-        if not isinstance(image, torch.Tensor):
-            return "Input must be a tensor."
-        if mode not in ["brightness", "contrast"]:
-             return f"Invalid mode: {mode}"
-        if aggregation not in ["mean", "min", "max", "first"]:
-            return f"Invalid aggregation method: {aggregation}"
+        if image is None: return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation method: {aggregation}"
         return True
 
     def analyze(self, image, mode, aggregation):
         scores = []
         try:
-            for i in range(image.shape[0]):
-                img_tensor = image[i]
-                img_np = 255. * img_tensor.cpu().numpy()
-                img_np = np.clip(img_np, 0, 255).astype(np.uint8)
+            img_list = tensor_to_numpy(image)
+
+            for img_np in img_list:
                 img_gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
 
                 if mode == "brightness":
                     score = np.mean(img_gray)
-                else: # contrast
+                elif mode == "contrast":
                     score = img_gray.std()
+                elif mode == "exposure_score":
+                    # Calculate histogram
+                    hist = cv2.calcHist([img_gray], [0], None, [256], [0, 256])
+                    # Simple exposure metric: penalize too many dark or bright pixels
+                    # Low score = bad exposure (either under or over)
+                    # Normalize hist
+                    hist_norm = hist / hist.sum()
+
+                    # Measure entropy or spread?
+                    # Let's use a heuristic: score = 1 - (under_exposed + over_exposed)
+                    # Under: < 20, Over: > 235
+                    under = hist_norm[:20].sum()
+                    over = hist_norm[235:].sum()
+                    score = 1.0 - (under + over)
+                    # Scale to 0-100 for consistency with others? Or 0-1.
+                    # Let's keep 0-1.
 
                 scores.append(score)
         except Exception as e:
-            error_msg = f"Error during brightness/contrast analysis: {str(e)}"
-            print(error_msg)
-            return {"ui": {"text": [error_msg]}, "result": (0.0, error_msg)}
+            raise InferenceError(f"Brightness/Contrast analysis failed: {str(e)}")
 
         final_score = aggregate_scores(scores, aggregation)
-        score_text = f"{mode.capitalize()} ({aggregation}): {final_score:.2f}"
+        score_text = f"{mode.capitalize()} ({aggregation}): {final_score:.4f}"
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text)
+            "result": (final_score, score_text, scores)
         }
 
 class IQA_Colorfulness:
@@ -144,31 +170,29 @@ class IQA_Colorfulness:
             }
         }
 
-    RETURN_TYPES = ("FLOAT", "STRING")
-    RETURN_NAMES = ("score", "score_text")
+    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
+    RETURN_NAMES = ("score", "score_text", "raw_scores")
     FUNCTION = "analyze"
     CATEGORY = "IQA/OpenCV"
 
     @classmethod
+    def IS_CHANGED(s, aggregation, **kwargs):
+        return get_hash([aggregation])
+
+    @classmethod
     def VALIDATE_INPUTS(s, image, aggregation):
-        if image is None:
-             return "Image input is missing."
-        if not isinstance(image, torch.Tensor):
-            return "Input must be a tensor."
-        if aggregation not in ["mean", "min", "max", "first"]:
-            return f"Invalid aggregation method: {aggregation}"
+        if image is None: return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
     def analyze(self, image, aggregation):
         scores = []
         try:
-            for i in range(image.shape[0]):
-                img_tensor = image[i]
-                img_np = 255. * img_tensor.cpu().numpy()
-                img_np = np.clip(img_np, 0, 255).astype(np.uint8)
+            img_list = tensor_to_numpy(image)
+            for img_np in img_list:
                 img_bgr = cv2.cvtColor(img_np, cv2.COLOR_RGB2BGR)
-
                 B, G, R = cv2.split(img_bgr.astype("float"))
+
                 rg = np.absolute(R - G)
                 yb = np.absolute(0.5 * (R + G) - B)
                 (rbMean, rbStd) = (np.mean(rg), np.std(rg))
@@ -176,17 +200,67 @@ class IQA_Colorfulness:
                 stdRoot = np.sqrt((rbStd ** 2) + (ybStd ** 2))
                 meanRoot = np.sqrt((rbMean ** 2) + (ybMean ** 2))
                 score = stdRoot + (0.3 * meanRoot)
-
                 scores.append(score)
         except Exception as e:
-            error_msg = f"Error during colorfulness analysis: {str(e)}"
-            print(error_msg)
-            return {"ui": {"text": [error_msg]}, "result": (0.0, error_msg)}
+            raise InferenceError(f"Colorfulness analysis failed: {str(e)}")
 
         final_score = aggregate_scores(scores, aggregation)
         score_text = f"Colorfulness ({aggregation}): {final_score:.2f}"
 
         return {
             "ui": {"text": [score_text]},
-            "result": (final_score, score_text)
+            "result": (final_score, score_text, scores)
+        }
+
+class IQA_Noise_Estimation:
+    @classmethod
+    def INPUT_TYPES(s):
+        return {
+            "required": {
+                "image": ("IMAGE",),
+                "aggregation": (["mean", "min", "max", "first"], {"default": "mean"}),
+            }
+        }
+
+    RETURN_TYPES = ("FLOAT", "STRING", "FLOAT")
+    RETURN_NAMES = ("score", "score_text", "raw_scores")
+    FUNCTION = "analyze"
+    CATEGORY = "IQA/OpenCV"
+
+    @classmethod
+    def IS_CHANGED(s, aggregation, **kwargs):
+        return get_hash([aggregation])
+
+    @classmethod
+    def VALIDATE_INPUTS(s, image, aggregation):
+        if image is None: return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
+        return True
+
+    def analyze(self, image, aggregation):
+        scores = []
+        try:
+            img_list = tensor_to_numpy(image)
+            for img_np in img_list:
+                # Use scikit-image's estimate_sigma
+                # It uses Median Absolute Deviation of Wavelet coefficients (Donoho's method)
+                # It's robust and standard.
+                # image is H,W,3 or H,W. estimate_sigma handles multichannel.
+                # We assume average across channels or treat as multichannel.
+
+                # Normalize to 0-1 for skimage consistency if needed?
+                # skimage usually works with float 0-1 or uint8.
+                # Let's pass the uint8 img_np directly, it handles it.
+                sigma = skimage.restoration.estimate_sigma(img_np, channel_axis=-1, average_sigmas=True)
+
+                scores.append(float(sigma))
+        except Exception as e:
+            raise InferenceError(f"Noise estimation failed: {str(e)}")
+
+        final_score = aggregate_scores(scores, aggregation)
+        score_text = f"Noise Level ({aggregation}): {final_score:.4f}"
+
+        return {
+            "ui": {"text": [score_text]},
+            "result": (final_score, score_text, scores)
         }
