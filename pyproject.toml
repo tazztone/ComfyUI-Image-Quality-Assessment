@@ -1,18 +1,25 @@
 [project]
 name = "comfyui-iqa-node"
-description = "Image Quality Assessment nodes for ComfyUI using PyIQA and OpenCV"
 version = "1.0.0"
+description = "Image Quality Assessment nodes for ComfyUI using PyIQA and OpenCV"
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    {name = "Your Name", email = "your.email@example.com"}
 ]
-license = { text = "MIT" }
+license = {text = "MIT"}
 readme = "README.md"
 dependencies = [
     "pyiqa>=0.1.0",
     "opencv-python>=4.5.0",
-    "torch>=1.7.0",
-    "numpy>=1.19.0"
+    "numpy>=1.19.0",
+    "scikit-image>=0.19.0",
+    "scipy>=1.8.0",
+    "torch"
 ]
 
 [project.urls]
-Repository = "https://github.com/yourusername/ComfyUI-IQA-Node"
+Repository = "https://github.com/tazztone/ComfyUI-Image-Quality-Assessment"
+
+[tool.comfy]
+PublisherId = "tazztone"
+DisplayName = "ComfyUI IQA Nodes"
+Icon = "https://github.com/tazztone/ComfyUI-Image-Quality-Assessment/raw/main/icon.png"
