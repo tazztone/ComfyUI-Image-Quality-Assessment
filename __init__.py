@@ -10,11 +10,11 @@ NODE_CLASS_MAPPINGS = {
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "PyIQA_NoReferenceNode": "PyIQA No-Reference Metric",
-    "PyIQA_FullReferenceNode": "PyIQA Full-Reference Metric",
-    "IQA_Blur_Estimation": "OpenCV Blur Estimation",
-    "IQA_Brightness_Contrast": "OpenCV Brightness & Contrast",
-    "IQA_Colorfulness": "OpenCV Colorfulness",
+    "PyIQA_NoReferenceNode": "IQA: PyIQA No-Reference",
+    "PyIQA_FullReferenceNode": "IQA: PyIQA Full-Reference",
+    "IQA_Blur_Estimation": "IQA: Blur Estimation (OpenCV)",
+    "IQA_Brightness_Contrast": "IQA: Brightness & Contrast (OpenCV)",
+    "IQA_Colorfulness": "IQA: Colorfulness (OpenCV)",
 }
 
 WEB_DIRECTORY = "./web/js"
