@@ -7,6 +7,9 @@ try:
     from comfy_api.latest import io as real_io
     USE_NATIVE_V3 = True
     io = real_io
+    # Alias Enum to Combo for compatibility because standard API imports python Enum as Enum
+    if not hasattr(io, "Enum") or not hasattr(io.Enum, "Input"):
+        io.Enum = io.Combo
 except ImportError:
     USE_NATIVE_V3 = False
 
@@ -58,10 +61,19 @@ except ImportError:
             @staticmethod
             def Output(name=None): return Output("STRING", name)
 
+        class Boolean:
+            @staticmethod
+            def Input(name, **kwargs): return Input(name, "BOOLEAN", **kwargs)
+            @staticmethod
+            def Output(name=None): return Output("BOOLEAN", name)
+
         class Enum:
             @staticmethod
             def Input(name, values, **kwargs):
                 return Input(name, values, **kwargs)
+
+        class Combo(Enum):
+             pass
 
         class Any:
              @staticmethod
