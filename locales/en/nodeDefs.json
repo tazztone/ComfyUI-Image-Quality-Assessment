@@ -1,0 +1,23 @@
+{
+    "PyIQA_NoReferenceNode": {
+        "title": "IQA: PyIQA No-Reference",
+        "inputs": {
+            "image": "Input Image",
+            "metric": "Metric Model",
+            "device": "Compute Device",
+            "aggregation": "Batch Aggregation Method",
+            "keep_model_loaded": "Cache Model"
+        },
+        "outputs": {
+            "score": "Aggregated Score",
+            "score_text": "Score Info",
+            "raw_scores": "Batch Scores"
+        }
+    },
+    "IQA_Blur_Estimation": {
+        "title": "IQA: Blur Estimation",
+        "inputs": {
+            "mode": "Algorithm Mode"
+        }
+    }
+}
