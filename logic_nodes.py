@@ -90,7 +90,7 @@ class IQA_ThresholdFilter(io.ComfyNode):
             category="IQA/Logic",
             inputs=[
                 io.Image.Input("images"),
-                io.Float.Input("scores", forceInput=True),
+                io.Float.Input("scores"),
                 io.Float.Input("threshold", default=0.5, step=0.01),
                 io.Enum.Input("operation", ["greater", "less"], default="greater")
             ],
@@ -152,7 +152,7 @@ class IQA_BatchRanker(io.ComfyNode):
             category="IQA/Logic",
             inputs=[
                 io.Image.Input("images"),
-                io.Float.Input("scores", forceInput=True),
+                io.Float.Input("scores"),
                 io.Enum.Input("order", ["descending", "ascending"], default="descending"),
                 io.Int.Input("take_top_n", default=0, min=0)
             ],
