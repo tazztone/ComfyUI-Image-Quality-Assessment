@@ -16,7 +16,7 @@ class IQA_HeatmapVisualizer(io.ComfyNode):
                 io.Enum.Input("colormap", ["JET", "VIRIDIS", "PLASMA", "INFERNO", "MAGMA", "HOT"], default="JET"),
                 io.Float.Input("normalize_min", default=0.0, min=0.0, max=1.0),
                 io.Float.Input("normalize_max", default=1.0, min=0.0, max=1.0),
-                io.Any.Input("score_map_optional", optional=True) # If upstream node provides a map?
+                io.Image.Input("score_map_optional", optional=True) # If upstream node provides a map?
             ],
             outputs=[
                 io.Image.Output("heatmap_image")
