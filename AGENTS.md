@@ -1,11 +1,12 @@
 # ComfyUI-IQA-Node Developer Guide
 
-This repository contains custom nodes for ComfyUI that perform Image Quality Assessment (IQA) using `pyiqa`, `opencv`, and `scikit-image`.
+This repository contains custom nodes for ComfyUI that perform Image Quality Assessment (IQA) using `pyiqa`, `opencv`, `scikit-image`, `scikit-learn`, and `matplotlib`.
 
 ## Repository Structure
 
 - `pyiqa_nodes.py`: Deep Learning based metrics (uses `pyiqa`).
 - `opencv_nodes.py`: Classical computer vision metrics (uses `opencv` and `scikit-image`).
+- `analysis_nodes.py`: Advanced image analysis and visualization (uses `matplotlib`, `scikit-learn`).
 - `logic_nodes.py`: Flow control nodes like `Threshold Filter` and `Batch Ranker`.
 - `score_normalizer.py`: Utility for scaling and inverting scores.
 - `visualization_nodes.py`: Heatmap generators and visualization helpers.
@@ -55,6 +56,8 @@ Most nodes support batch processing. The `aggregate_scores` utility in `iqa_core
 ### Dependencies & Environment
 - **Numpy**: Pinned to `<2.0.0` to avoid breaking `imgaug` and other CV dependencies.
 - **PyTorch**: Used for tensor manipulation and running PyIQA models.
+- **Matplotlib**: Must use the `Agg` backend to avoid GUI/thread issues on the server (`plt.switch_backend('Agg')`).
+- **Scikit-learn**: Used for clustering/analysis tasks.
 - **Device Management**: Always support `cuda`, `cpu`, and `auto` selection.
 
 ### Handling Batch Tensors
@@ -73,10 +76,12 @@ The `web/js/iqa_score_display.js` script automatically adds a display widget to 
 
 ### Standalone Unit Tests
 Located in `tests/test_unit.py`. These tests validate core logic (aggregation, normalization, caching) without requiring a full ComfyUI install.
+New analysis nodes logic is tested in `tests/test_analysis.py`.
 
 **Run Tests:**
 ```bash
 python tests/test_unit.py -v
+python tests/test_analysis.py -v
 ```
 
 ### Syntax Verification
@@ -97,7 +102,7 @@ python -m py_compile *.py
 
 ## Development Workflow
 
-1. **Add Logic**: Implement your metric in `opencv_nodes.py` (classical) or `pyiqa_nodes.py` (DL).
+1. **Add Logic**: Implement your metric in `opencv_nodes.py`, `analysis_nodes.py`, or `pyiqa_nodes.py`.
 2. **Handle Batches**: Ensure your `execute` method handles batch tensors correctly.
 3. **Registry**: Register the new node class in `__init__.py`.
 4. **Docs**: Update `README.md` and this guide if any new shared utilities are added.
