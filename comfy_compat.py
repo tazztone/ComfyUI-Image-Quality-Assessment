@@ -80,7 +80,8 @@ except ImportError:
              def Input(name, **kwargs): return Input(name, "*", **kwargs)
 
         class NodeOutput(tuple):
-            pass
+            def __new__(cls, *args):
+                return super().__new__(cls, args)
 
         class ComfyNode:
             @classmethod
