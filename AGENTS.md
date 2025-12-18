@@ -1,67 +1,92 @@
 # ComfyUI-IQA-Node Developer Guide
 
-This repository contains custom nodes for ComfyUI that perform Image Quality Assessment (IQA) using `pyiqa` and `opencv`.
+This repository contains custom nodes for ComfyUI that perform Image Quality Assessment (IQA) using `pyiqa`, `opencv`, and `scikit-image`.
 
 ## Repository Structure
 
-- `pyiqa_nodes.py`: Contains nodes that use the `pyiqa` library (Deep Learning models).
-- `opencv_nodes.py`: Contains nodes that use `opencv` and `scikit-image` (Classical CV metrics).
-- `logic_nodes.py`: Contains utility nodes for filtering and ranking.
-- `score_normalizer.py`: Contains the `IQA_ScoreNormalizer` node.
-- `visualization_nodes.py`: Contains nodes for visualizing results (e.g., heatmaps).
-- `iqa_core.py`: Shared core logic, including the `ModelCache` and utilities.
-- `comfy_compat.py`: A compatibility layer that provides the V3 Node Schema (`io.ComfyNode`, `io.Schema`, etc.).
-- `web/js/`: Frontend extensions.
-- `tests/`: Standalone unit tests.
+- `pyiqa_nodes.py`: Deep Learning based metrics (uses `pyiqa`).
+- `opencv_nodes.py`: Classical computer vision metrics (uses `opencv` and `scikit-image`).
+- `logic_nodes.py`: Flow control nodes like `Threshold Filter` and `Batch Ranker`.
+- `score_normalizer.py`: Utility for scaling and inverting scores.
+- `visualization_nodes.py`: Heatmap generators and visualization helpers.
+- `iqa_core.py`: Core shared logic: `ModelCache`, `aggregate_scores`, and exception types.
+- `comfy_compat.py`: V3 Node Schema compatibility layer.
+- `web/js/`: Javascript extensions for the ComfyUI frontend.
+- `tests/`: Standalone unit tests for core logic.
+
+---
+
+## Core Architecture
+
+### Node Definition (V3 Schema)
+All nodes MUST inherit from `io.ComfyNode` (defined in `comfy_compat.py`). This allows using a modern schema-based definition that is automatically converted to ComfyUI's legacy `INPUT_TYPES` format.
+
+**Key Requirements:**
+- Must implement `define_schema()`.
+- Must implement `execute()`.
+- Use `io.NodeOutput` for returning results.
+
+### Model Caching
+Deep learning models are heavy. We use a global `ModelCache` (LRU) in `iqa_core.py` to keep models in VRAM.
+- **Cache Size**: Configurable via `COMFY_IQA_CACHE_SIZE` environment variable (default: 3).
+- **Cleanup**: `ModelCache` automatically calls `torch.cuda.empty_cache()` when symbols are evicted.
+
+### Score Aggregation
+Most nodes support batch processing. The `aggregate_scores` utility in `iqa_core.py` handles:
+- **Methods**: `mean`, `max`, `min`, `median`, `first`.
+- **Filtering**: Automatically excludes `NaN` values.
+- **Type Safety**: Ensures output is a standard Python `float`.
+
+---
 
 ## Coding Standards
 
-### Node Definition (V3 Schema)
-All nodes MUST be defined using the V3 schema provided by `comfy_compat.py`. Do not use the legacy `INPUT_TYPES` dictionary directly.
+### Dependencies & Environment
+- **Numpy**: Pinned to `<2.0.0` to avoid breaking `imgaug` and other CV dependencies.
+- **PyTorch**: Used for tensor manipulation and running PyIQA models.
+- **Device Management**: Always support `cuda`, `cpu`, and `auto` selection.
 
-Example:
-```python
-from .comfy_compat import io
+### Handling Batch Tensors
+ComfyUI images are `[B, H, W, C]` tensors in `0.0 - 1.0` range.
+- Use `tensor_to_numpy()` in `iqa_core.py` to convert to list of `uint8` arrays for OpenCV processing.
+- For DL models, permute to `[B, C, H, W]` before passing to `pyiqa`.
 
-class MyNode(io.ComfyNode):
-    @classmethod
-    def define_schema(cls):
-        return io.Schema(
-            node_id="MyNode",
-            display_name="My Node",
-            category="IQA",
-            inputs=[ io.Image.Input("image") ],
-            outputs=[ io.Float.Output("score") ]
-        )
+### Frontend Integration
+The `web/js/iqa_score_display.js` script automatically adds a display widget to any node in the "IQA" category.
+- Backend must return `{"ui": {"text": [display_string]}}`.
+- The `io.NodeOutput` helper handles this automatically if passed a string as the second argument.
 
-    @classmethod
-    def execute(cls, image):
-        # ... logic ...
-        return io.NodeOutput(score)
-```
+---
 
-### Dependencies
-- **Numpy**: We pin `numpy<2.0.0` in `requirements.txt`. Do NOT upgrade numpy to 2.x as it breaks `imgaug` (used by some dependencies).
-- **PyIQA**: Used for DL metrics.
-- **OpenCV/Scikit-Image**: Used for classical metrics.
+## Testing
 
-### Outputs
-- Nodes typically return a calculated score (float) and often a string representation for UI display.
-- Some nodes return `raw_scores` (list) alongside aggregated scores to support batch processing logic.
+### Standalone Unit Tests
+Located in `tests/test_unit.py`. These tests validate core logic (aggregation, normalization, caching) without requiring a full ComfyUI install.
 
-## Testing & Development environment
-
-- Use `scripts/setup_dev_env.sh` to set up a development environment. This script will:
-  - Clone ComfyUI (if not present).
-  - Install dependencies.
-  - Generate `env_setup.sh` to set `PYTHONPATH`.
-
-To run tests or scripts, source the environment first:
+**Run Tests:**
 ```bash
-source env_setup.sh
-python <your_script.py>
+python tests/test_unit.py -v
 ```
 
-## Frontend
-- `web/js/iqa_score_display.js` handles the display of scores on the nodes themselves.
-- Nodes return a dictionary `{ "ui": { "text": ... }, "result": ... }`. The `io.NodeOutput` helper handles this structure automatically.
+### Syntax Verification
+Before committing, verify all files are syntactically correct:
+```bash
+python -m py_compile *.py
+```
+
+---
+
+## Configuration
+
+| Env Variable | Description | Default |
+|--------------|-------------|---------|
+| `COMFY_IQA_CACHE_SIZE` | Max number of DL models to keep in VRAM | `3` |
+
+---
+
+## Development Workflow
+
+1. **Add Logic**: Implement your metric in `opencv_nodes.py` (classical) or `pyiqa_nodes.py` (DL).
+2. **Handle Batches**: Ensure your `execute` method handles batch tensors correctly.
+3. **Registry**: Register the new node class in `__init__.py`.
+4. **Docs**: Update `README.md` and this guide if any new shared utilities are added.
