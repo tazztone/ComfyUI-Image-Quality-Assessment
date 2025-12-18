@@ -3,6 +3,7 @@ import numpy as np
 from collections import OrderedDict
 import hashlib
 import json
+import os
 
 # Custom Exceptions
 class IQAError(Exception):
@@ -44,8 +45,9 @@ class ModelCache:
             del removed_model
             torch.cuda.empty_cache()
 
-# Global Cache Instance
-GLOBAL_MODEL_CACHE = ModelCache(max_size=3) # Keep small to avoid VRAM OOM
+# Global Cache Instance (configurable via env var)
+CACHE_SIZE = int(os.environ.get("COMFY_IQA_CACHE_SIZE", "3"))
+GLOBAL_MODEL_CACHE = ModelCache(max_size=CACHE_SIZE)
 
 def get_model_cache():
     return GLOBAL_MODEL_CACHE
@@ -76,6 +78,8 @@ def aggregate_scores(scores, method="mean"):
         return float(np.min(scores))
     elif method == "max":
         return float(np.max(scores))
+    elif method == "median":
+        return float(np.median(scores))
     elif method == "first":
         return float(scores[0])
 

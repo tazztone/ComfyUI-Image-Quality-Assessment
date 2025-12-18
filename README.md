@@ -59,6 +59,8 @@ A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyU
 - **IQA: Brightness & Contrast**: Returns mean brightness and RMS contrast.
 - **IQA: Colorfulness**: Returns a colorfulness index (metric by Hasler and Suesstrunk).
 - **IQA: Noise Estimation**: Returns estimated noise sigma.
+- **IQA: Edge Density**: Measures edge density using Canny detection (percentage of edge pixels).
+- **IQA: Saturation**: Measures color saturation using HSV colorspace.
 
 ### Logic Nodes
 - **IQA: Threshold Filter**:
@@ -69,6 +71,9 @@ A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyU
   - Optional `take_top_n` to keep only the best images.
 - **IQA: Ensemble Scorer**:
   - weighted average of up to 4 different scores.
+- **IQA: Score Normalizer**:
+  - Normalizes scores to a consistent range (e.g., 0-100).
+  - Supports inversion (lower is better → higher is better) and clamping.
 
 ### Visualization Nodes
 - **IQA: Heatmap Visualizer**:

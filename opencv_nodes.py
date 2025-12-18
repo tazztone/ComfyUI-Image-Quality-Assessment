@@ -16,7 +16,7 @@ class IQA_Blur_Estimation(io.ComfyNode):
             inputs=[
                 io.Image.Input("image"),
                 io.Enum.Input("mode", ["laplacian", "tenengrad"], default="laplacian"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -33,7 +33,7 @@ class IQA_Blur_Estimation(io.ComfyNode):
     @classmethod
     def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
         if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation method: {aggregation}"
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation method: {aggregation}"
         if mode not in ["laplacian", "tenengrad"]: return f"Invalid mode: {mode}"
         return True
 
@@ -108,7 +108,7 @@ class IQA_Brightness_Contrast(io.ComfyNode):
             inputs=[
                 io.Image.Input("image"),
                 io.Enum.Input("mode", ["brightness", "contrast", "exposure_score"], default="brightness"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -124,7 +124,7 @@ class IQA_Brightness_Contrast(io.ComfyNode):
     @classmethod
     def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
         if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation method: {aggregation}"
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation method: {aggregation}"
         return True
 
     @classmethod
@@ -178,7 +178,7 @@ class IQA_Colorfulness(io.ComfyNode):
             category="IQA/OpenCV",
             inputs=[
                 io.Image.Input("image"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -194,7 +194,7 @@ class IQA_Colorfulness(io.ComfyNode):
     @classmethod
     def VALIDATE_INPUTS(cls, image, aggregation, **kwargs):
         if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
     @classmethod
@@ -234,7 +234,7 @@ class IQA_Noise_Estimation(io.ComfyNode):
             category="IQA/OpenCV",
             inputs=[
                 io.Image.Input("image"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -250,7 +250,7 @@ class IQA_Noise_Estimation(io.ComfyNode):
     @classmethod
     def VALIDATE_INPUTS(cls, image, aggregation, **kwargs):
         if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
     @classmethod
@@ -276,6 +276,151 @@ class IQA_Noise_Estimation(io.ComfyNode):
 
         final_score = aggregate_scores(scores, aggregation)
         score_text = f"Noise Level ({aggregation}): {final_score:.4f}"
+
+        return {
+            "ui": {"text": [score_text]},
+            "result": io.NodeOutput(final_score, score_text, scores)
+        }
+
+
+class IQA_EdgeDensity(io.ComfyNode):
+    """Measures edge density using Canny edge detection."""
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="IQA_EdgeDensity",
+            display_name="IQA: Edge Density (OpenCV)",
+            category="IQA/OpenCV",
+            inputs=[
+                io.Image.Input("image"),
+                io.Int.Input("low_threshold", default=50, min=0, max=255),
+                io.Int.Input("high_threshold", default=150, min=0, max=255),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Image.Output("edge_map"),
+                io.Float.Output("raw_scores")
+            ]
+        )
+
+    @classmethod
+    def IS_CHANGED(cls, low_threshold, high_threshold, aggregation, **kwargs):
+        return get_hash([low_threshold, high_threshold, aggregation])
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, image, low_threshold, high_threshold, aggregation, **kwargs):
+        if image is None: return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
+        if low_threshold >= high_threshold: return "Low threshold must be less than high threshold."
+        return True
+
+    @classmethod
+    def execute(cls, image, low_threshold, high_threshold, aggregation):
+        scores = []
+        maps = []
+
+        try:
+            img_list = tensor_to_numpy(image)
+
+            for img_np in img_list:
+                img_gray = cv2.cvtColor(img_np, cv2.COLOR_RGB2GRAY)
+
+                # Canny edge detection
+                edges = cv2.Canny(img_gray, low_threshold, high_threshold)
+
+                # Edge density = percentage of edge pixels
+                total_pixels = edges.size
+                edge_pixels = np.sum(edges > 0)
+                density = (edge_pixels / total_pixels) * 100  # As percentage
+
+                scores.append(density)
+
+                # Create RGB edge map for visualization
+                edge_rgb = cv2.cvtColor(edges, cv2.COLOR_GRAY2RGB)
+                map_tensor = torch.from_numpy(edge_rgb.astype(np.float32) / 255.0)
+                maps.append(map_tensor)
+
+        except Exception as e:
+            raise InferenceError(f"Edge density calculation failed: {str(e)}")
+
+        final_score = aggregate_scores(scores, aggregation)
+        score_text = f"Edge Density ({aggregation}): {final_score:.2f}%"
+
+        if maps:
+            maps_out = torch.stack(maps)
+        else:
+            maps_out = torch.zeros_like(image)
+
+        return {
+            "ui": {"text": [score_text]},
+            "result": io.NodeOutput(final_score, score_text, maps_out, scores)
+        }
+
+
+class IQA_Saturation(io.ComfyNode):
+    """Measures average color saturation using HSV colorspace."""
+    @classmethod
+    def define_schema(cls):
+        return io.Schema(
+            node_id="IQA_Saturation",
+            display_name="IQA: Saturation (OpenCV)",
+            category="IQA/OpenCV",
+            inputs=[
+                io.Image.Input("image"),
+                io.Enum.Input("mode", ["mean", "std", "min", "max"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+            ],
+            outputs=[
+                io.Float.Output("score"),
+                io.String.Output("score_text"),
+                io.Float.Output("raw_scores")
+            ]
+        )
+
+    @classmethod
+    def IS_CHANGED(cls, mode, aggregation, **kwargs):
+        return get_hash([mode, aggregation])
+
+    @classmethod
+    def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
+        if image is None: return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
+        if mode not in ["mean", "std", "min", "max"]: return f"Invalid mode: {mode}"
+        return True
+
+    @classmethod
+    def execute(cls, image, mode, aggregation):
+        scores = []
+
+        try:
+            img_list = tensor_to_numpy(image)
+
+            for img_np in img_list:
+                # Convert RGB to HSV
+                img_hsv = cv2.cvtColor(img_np, cv2.COLOR_RGB2HSV)
+                saturation_channel = img_hsv[:, :, 1]  # S channel (0-255)
+
+                # Normalize to 0-100 scale
+                sat_normalized = saturation_channel / 255.0 * 100
+
+                if mode == "mean":
+                    score = np.mean(sat_normalized)
+                elif mode == "std":
+                    score = np.std(sat_normalized)
+                elif mode == "min":
+                    score = np.min(sat_normalized)
+                elif mode == "max":
+                    score = np.max(sat_normalized)
+
+                scores.append(score)
+
+        except Exception as e:
+            raise InferenceError(f"Saturation analysis failed: {str(e)}")
+
+        final_score = aggregate_scores(scores, aggregation)
+        score_text = f"Saturation {mode} ({aggregation}): {final_score:.2f}"
 
         return {
             "ui": {"text": [score_text]},

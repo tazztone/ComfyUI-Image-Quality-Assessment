@@ -40,7 +40,7 @@ class PyIQA_NoReferenceNode(io.ComfyNode, PyIQA_Base):
     def define_schema(cls):
         # Common NR metrics from research
         metrics = [
-            "hyperiqa", "musique", "nima", "brisque", "clip_score", "niqe", "piqe",
+            "hyperiqa", "musiq", "nima", "brisque", "clip_score", "niqe", "piqe",
             "topiq_nr", "nrqm", "pi", "ilniqe", "clipiqa", "laion_aes",
             "dbcnn", "cnniqa", "paq2piq", "face_iqa"
         ]
@@ -63,7 +63,7 @@ class PyIQA_NoReferenceNode(io.ComfyNode, PyIQA_Base):
                 io.Image.Input("image"),
                 io.Enum.Input("metric", metrics, default="hyperiqa"),
                 io.Enum.Input("device", ["cuda", "cpu", "auto"], default="auto"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
                 io.Boolean.Input("keep_model_loaded", default=True),
             ],
             outputs=[
@@ -82,7 +82,7 @@ class PyIQA_NoReferenceNode(io.ComfyNode, PyIQA_Base):
     @classmethod
     def VALIDATE_INPUTS(cls, image, metric, device, aggregation, **kwargs):
         if not PYIQA_AVAILABLE: return "PyIQA library not installed"
-        if aggregation not in ["mean", "min", "max", "first"]: return f"Invalid aggregation: {aggregation}"
+        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
         return True
 
     @classmethod
@@ -159,7 +159,7 @@ class PyIQA_FullReferenceNode(io.ComfyNode, PyIQA_Base):
                 io.Image.Input("reference_image"),
                 io.Enum.Input("metric", metrics, default="lpips"),
                 io.Enum.Input("device", ["cuda", "cpu", "auto"], default="auto"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "first"], default="mean"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
                 io.Boolean.Input("keep_model_loaded", default=True),
             ],
             outputs=[
