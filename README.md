@@ -78,4 +78,4 @@ A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyU
 ## Credits
 - [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch) for DL metrics.
 - [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
-- [ComfyUI-Image-Analysis-Tools](https://github.com/tazztone/ComfyUI-Image-Analysis-Tools) for analysis logic.
+- [ThatGlennD/ComfyUI-Image-Analysis-Tools](https://github.com/ThatGlennD/ComfyUI-Image-Analysis-Tools/) for analysis logic.
