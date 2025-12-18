@@ -6,11 +6,13 @@ This repository contains custom nodes for ComfyUI that perform Image Quality Ass
 
 - `pyiqa_nodes.py`: Contains nodes that use the `pyiqa` library (Deep Learning models).
 - `opencv_nodes.py`: Contains nodes that use `opencv` and `scikit-image` (Classical CV metrics).
-- `logic_nodes.py`: Contains utility nodes for filtering, ranking, and ensembling scores.
+- `logic_nodes.py`: Contains utility nodes for filtering and ranking.
+- `score_normalizer.py`: Contains the `IQA_ScoreNormalizer` node.
 - `visualization_nodes.py`: Contains nodes for visualizing results (e.g., heatmaps).
 - `iqa_core.py`: Shared core logic, including the `ModelCache` and utilities.
 - `comfy_compat.py`: A compatibility layer that provides the V3 Node Schema (`io.ComfyNode`, `io.Schema`, etc.).
 - `web/js/`: Frontend extensions.
+- `tests/`: Standalone unit tests.
 
 ## Coding Standards
 
