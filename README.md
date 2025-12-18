@@ -1,30 +1,24 @@
 # ComfyUI-IQA-Node
 
-A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyUI. This pack leverages both **PyIQA** for deep learning-based metrics and **OpenCV** for fast, classical computer vision metrics. It also includes utility nodes for filtering and ranking images based on these scores.
+A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyUI. This pack leverages **PyIQA** for deep learning-based metrics, **OpenCV** for classical computer vision metrics, and advanced **Analysis Tools** for detailed image inspection.
 
 ## Features
 
 - **PyIQA Deep Image Analysis**:
   - Access to a vast zoo of state-of-the-art IQA models (HyperIQA, MUSIQ, NIMA, LPIPS, FID, SSIM, etc.).
-  - **Smart Caching**: Models are cached in memory to avoid reloading, with an option to unload to save VRAM.
-  - **Batch Support**: Processes batches of images with configurable aggregation (mean, min, max).
-  - **Automatic Device Detection**: Runs on CUDA if available, falls back to CPU.
+  - **Smart Caching**: Models are cached in memory to avoid reloading.
+  - **Batch Support**: Processes batches with configurable aggregation.
+  - **Automatic Device Detection**: Runs on CUDA if available.
 
-- **OpenCV Basic Image Analysis**:
-  - Lightweight, deterministic metrics.
-  - **Blur Estimation**: Detect blurry images using Laplacian variance.
-  - **Brightness & Contrast**: Basic image statistics.
-  - **Colorfulness**: Measures image vividness.
-  - **Noise Estimation**: Estimates noise levels.
+- **OpenCV & Analysis Tools**:
+  - **Classical Metrics**: Blur, Brightness, Contrast, Colorfulness, Noise.
+  - **Advanced Analysis**: Color Harmony, Color Temperature, Defocus (FFT), Clipping, Entropy.
+  - **Visualizations**: Histograms, Heatmaps, Color Wheels, Edge Maps.
 
 - **Logic & Visualization**:
-  - **Filtering**: Automatically discard images that don't meet a quality threshold.
-  - **Ranking**: Sort a batch of images by quality score.
-  - **Ensemble**: Combine multiple scores with custom weights.
-  - **Heatmaps**: Visualize metric maps (where supported).
-
-- **Frontend Integration**:
-  - Scores are displayed directly on the nodes in the workflow editor.
+  - **Filtering & Ranking**: Filter or sort images based on quality scores.
+  - **Ensemble**: Combine multiple scores.
+  - **Frontend Integration**: Real-time score display on nodes.
 
 ## Installation
 
@@ -38,53 +32,50 @@ A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyU
    ```bash
    pip install -r requirements.txt
    ```
-   *Note: This will install `pyiqa`, `opencv-python`, `scikit-image`, `torch`, and `torchvision`.*
+   *Note: This installs `pyiqa`, `opencv-python`, `scikit-image`, `scikit-learn`, `matplotlib`, `torch`, and `torchvision`.*
 
 ## Usage
 
 ### PyIQA Nodes
-- **IQA: PyIQA No-Reference**:
-  - Evaluate image quality without a reference image (e.g., aesthetics, technical quality).
-  - **Models**: `hyperiqa`, `musiq`, `nima`, `topiq`, etc.
-- **IQA: PyIQA Full-Reference**:
-  - Compare a generated image against a reference image (ground truth).
-  - **Models**: `lpips`, `ssim`, `psnr`, `fid`, etc.
-
-**Common Inputs**:
-- `device`: `auto`, `cuda`, or `cpu`.
-- `keep_model_loaded`: Optimization for VRAM.
+- **IQA: PyIQA No-Reference**: Evaluate aesthetics/quality (HyperIQA, MUSIQ, NIMA, etc.).
+- **IQA: PyIQA Full-Reference**: Compare against reference (LPIPS, SSIM, PSNR, FID, etc.).
 
 ### OpenCV Nodes
-- **IQA: Blur Estimation**: Higher score generally means sharper (Laplacian variance).
-- **IQA: Brightness & Contrast**: Returns mean brightness and RMS contrast.
-- **IQA: Colorfulness**: Returns a colorfulness index (metric by Hasler and Suesstrunk).
-- **IQA: Noise Estimation**: Returns estimated noise sigma.
-- **IQA: Edge Density**: Measures edge density using Canny detection (percentage of edge pixels).
-- **IQA: Saturation**: Measures color saturation using HSV colorspace.
+- **IQA: Blur Estimation**: Global blur detection (Laplacian/Tenengrad).
+- **IQA: Brightness & Contrast**: Basic statistics.
+- **IQA: Colorfulness**: Vividness metric.
+- **IQA: Noise Estimation**: Wavelet-based noise estimation (MAD).
+- **IQA: Edge Density**: Edge complexity.
+- **IQA: Saturation**: Average/Max saturation.
+
+### Analysis Nodes
+- **Analysis: Blur Detection**: Block-based blur analysis with heatmaps.
+- **Analysis: Color Harmony**: Identifies color schemes (Complementary, Triadic) and displays color wheel.
+- **Analysis: Color Cast**: Detects and visualizes unwanted color tints.
+- **Analysis: Color Temperature**: Estimates Kelvin temperature and labels (Warm/Cool).
+- **Analysis: Clipping**: Visualizes clipped highlights/shadows or saturation.
+- **Analysis: Defocus**: FFT-based frequency analysis to detect defocus.
+- **Analysis: Edge Density**: Detailed edge density analysis with maps.
+- **Analysis: Entropy**: Measures information content/entropy (bits).
+- **Analysis: Noise Estimation**: Variance-based noise mapping.
+- **Analysis: RGB Histogram**: Renders RGB histograms for the batch.
+- **Analysis: Sharpness/Focus**: Hybrid scoring (Laplacian + Tenengrad).
 
 ### Logic Nodes
-- **IQA: Threshold Filter**:
-  - Routes images to "Passed" or "Failed" outputs based on a score threshold.
-  - Useful for creating workflows that only save or process high-quality generations.
-- **IQA: Batch Ranker**:
-  - Sorts a batch of images based on their scores (Ascending/Descending).
-  - Optional `take_top_n` to keep only the best images.
-- **IQA: Ensemble Scorer**:
-  - weighted average of up to 4 different scores.
-- **IQA: Score Normalizer**:
-  - Normalizes scores to a consistent range (e.g., 0-100).
-  - Supports inversion (lower is better → higher is better) and clamping.
+- **IQA: Threshold Filter**: Route images based on score.
+- **IQA: Batch Ranker**: Sort images by score.
+- **IQA: Ensemble Scorer**: Weighted average of scores.
+- **IQA: Score Normalizer**: Scale/Invert scores.
 
 ### Visualization Nodes
-- **IQA: Heatmap Visualizer**:
-  - Colorizes single-channel maps (like blur maps or attention maps) using standard colormaps (JET, VIRIDIS, etc.).
+- **IQA: Heatmap Visualizer**: Apply colormaps to raw value maps.
 
 ## Tips
-- Use **Laplacian Blur Score** to filter out blurry generations.
-- Use **HyperIQA** or **MUSIQ** to score aesthetic quality.
-- Use **LPIPS** to measure how different two images are (requires `reference_image`).
-- Combine a scorer with **IQA: Threshold Filter** to automate quality control.
+- Use **Analysis: Defocus** or **IQA: Blur Estimation** to filter bad generations.
+- Use **Analysis: Color Harmony** to verify prompt adherence (e.g., "teal and orange").
+- Use **IQA: Batch Ranker** to pick the best image from a large batch.
 
 ## Credits
-- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch) for the deep learning metrics.
-- [ComfyUI](https://github.com/comfyanonymous/ComfyUI) for the node framework.
+- [IQA-PyTorch](https://github.com/chaofengc/IQA-PyTorch) for DL metrics.
+- [ComfyUI](https://github.com/comfyanonymous/ComfyUI).
+- [ComfyUI-Image-Analysis-Tools](https://github.com/tazztone/ComfyUI-Image-Analysis-Tools) for analysis logic.
