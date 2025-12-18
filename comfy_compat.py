@@ -80,7 +80,8 @@ except ImportError:
              def Input(name, **kwargs): return Input(name, "*", **kwargs)
 
         class NodeOutput(tuple):
-            pass
+            def __new__(cls, *args):
+                return super().__new__(cls, args)
 
         class ComfyNode:
             @classmethod
@@ -123,13 +124,15 @@ except ImportError:
 
                 ret_types = []
                 ret_names = []
+                has_custom_names = False
                 for out in schema.outputs:
                     ret_types.append(out.type_str)
+                    ret_names.append(out.name)
                     if out.name:
-                        ret_names.append(out.name)
+                        has_custom_names = True
 
                 cls.RETURN_TYPES = tuple(ret_types)
-                if ret_names:
+                if has_custom_names:
                     cls.RETURN_NAMES = tuple(ret_names)
 
                 cls.FUNCTION = "execute_wrapper"
