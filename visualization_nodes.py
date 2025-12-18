@@ -12,11 +12,11 @@ class IQA_HeatmapVisualizer(io.ComfyNode):
             display_name="IQA: Heatmap Visualizer",
             category="IQA/Visualization",
             inputs=[
-                io.Image.Input("image"),
-                io.Enum.Input("colormap", ["JET", "VIRIDIS", "PLASMA", "INFERNO", "MAGMA", "HOT"], default="JET"),
-                io.Float.Input("normalize_min", default=0.0, min=0.0, max=1.0),
-                io.Float.Input("normalize_max", default=1.0, min=0.0, max=1.0),
-                io.Image.Input("score_map_optional", optional=True) # If upstream node provides a map?
+                io.Image.Input("image", tooltip="Base image for heatmap generation.\n\nIf no score_map is provided, this image will be converted to grayscale and used as the intensity map."),
+                io.Enum.Input("colormap", ["JET", "VIRIDIS", "PLASMA", "INFERNO", "MAGMA", "HOT"], default="JET", tooltip="Color scheme for the heatmap:\n\n• JET: Classic rainbow (blue→cyan→green→yellow→red)\n• VIRIDIS: Perceptually uniform (purple→blue→green→yellow)\n• PLASMA: Warm tones (purple→pink→orange→yellow)\n• INFERNO: Dark to bright (black→purple→red→yellow)\n• MAGMA: Similar to inferno, smoother\n• HOT: Heat colors (black→red→yellow→white)"),
+                io.Float.Input("normalize_min", default=0.0, min=0.0, max=1.0, tooltip="Minimum value for normalization (0.0-1.0).\n\n• Values at or below this become the colormap's minimum color\n• Use to adjust dynamic range of visualization\n• Lower value = more sensitivity to low intensities"),
+                io.Float.Input("normalize_max", default=1.0, min=0.0, max=1.0, tooltip="Maximum value for normalization (0.0-1.0).\n\n• Values at or above this become the colormap's maximum color\n• Use to adjust dynamic range of visualization\n• Higher value = more sensitivity to high intensities"),
+                io.Image.Input("score_map_optional", optional=True, tooltip="Optional: Pre-computed score/intensity map.\n\n• Connect from IQA nodes that output maps (e.g., blur_map, edge_map)\n• If not connected, the main 'image' input is used\n• Will be converted to grayscale before colormap application")
             ],
             outputs=[
                 io.Image.Output("heatmap_image")

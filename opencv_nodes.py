@@ -14,9 +14,9 @@ class IQA_Blur_Estimation(io.ComfyNode):
             display_name="IQA: Blur Estimation (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image"),
-                io.Enum.Input("mode", ["laplacian", "tenengrad"], default="laplacian"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+                io.Image.Input("image", tooltip="Input image or batch of images to analyze for blur.\n\nHigher scores indicate sharper images.\nOutputs both a numeric score and a visual blur map."),
+                io.Enum.Input("mode", ["laplacian", "tenengrad"], default="laplacian", tooltip="Blur detection algorithm:\n\n• laplacian: Variance of Laplacian operator (recommended)\n  - Fast and reliable for general blur detection\n  - Higher variance = sharper image\n\n• tenengrad: Gradient magnitude using Sobel operator\n  - Better for detecting motion blur\n  - Measures average edge strength"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Lowest score (blurriest image)\n• max: Highest score (sharpest image)\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -106,9 +106,9 @@ class IQA_Brightness_Contrast(io.ComfyNode):
             display_name="IQA: Brightness & Contrast (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image"),
-                io.Enum.Input("mode", ["brightness", "contrast", "exposure_score"], default="brightness"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nConverts to grayscale internally for brightness/contrast calculations."),
+                io.Enum.Input("mode", ["brightness", "contrast", "exposure_score"], default="brightness", tooltip="What to measure:\n\n• brightness: Average pixel intensity (0-255 scale)\n  - 0 = pure black, 255 = pure white\n  - Ideal range: 100-150 for most images\n\n• contrast: Standard deviation of pixel values\n  - Higher = more contrast\n  - Low values indicate flat/washed out images\n\n• exposure_score: Exposure quality (0-1 scale)\n  - Penalizes under/overexposed pixels\n  - 1.0 = well exposed, 0.0 = poorly exposed"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Lowest score in batch\n• max: Highest score in batch\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -177,8 +177,8 @@ class IQA_Colorfulness(io.ComfyNode):
             display_name="IQA: Colorfulness (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nMeasures color variety and saturation using the Hasler-Süsstrunk colorfulness metric."),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Least colorful image\n• max: Most colorful image\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -233,8 +233,8 @@ class IQA_Noise_Estimation(io.ComfyNode):
             display_name="IQA: Noise Estimation (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+                io.Image.Input("image", tooltip="Input image or batch of images to analyze for noise.\n\nUses Donoho's Median Absolute Deviation (MAD) method via wavelet decomposition.\nHigher values indicate more noise."),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average noise level (recommended)\n• min: Cleanest image in batch\n• max: Noisiest image in batch\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -292,10 +292,10 @@ class IQA_EdgeDensity(io.ComfyNode):
             display_name="IQA: Edge Density (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image"),
-                io.Int.Input("low_threshold", default=50, min=0, max=255),
-                io.Int.Input("high_threshold", default=150, min=0, max=255),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nMeasures edge density as percentage of edge pixels.\nHigher scores indicate more detailed/complex images."),
+                io.Int.Input("low_threshold", default=50, min=0, max=255, tooltip="Canny edge detector lower threshold (0-255).\n\n• Lower values detect more edges (including noise)\n• Higher values detect only strong edges\n• Must be less than high_threshold\n• Default 50 works well for most images"),
+                io.Int.Input("high_threshold", default=150, min=0, max=255, tooltip="Canny edge detector upper threshold (0-255).\n\n• Edges above this are always kept\n• Edges between low and high are kept if connected to strong edges\n• Higher values = fewer, stronger edges only\n• Default 150 works well for most images"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average edge density (recommended)\n• min: Image with least edges\n• max: Image with most edges\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
             ],
             outputs=[
                 io.Float.Output("score"),
@@ -368,9 +368,9 @@ class IQA_Saturation(io.ComfyNode):
             display_name="IQA: Saturation (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image"),
-                io.Enum.Input("mode", ["mean", "std", "min", "max"], default="mean"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean"),
+                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nConverts to HSV colorspace and analyzes the Saturation channel.\nScore is on 0-100 scale (percentage saturation)."),
+                io.Enum.Input("mode", ["mean", "std", "min", "max"], default="mean", tooltip="What statistic to compute from saturation channel:\n\n• mean: Average saturation (recommended)\n  - Higher = more vibrant colors overall\n\n• std: Standard deviation of saturation\n  - Higher = more variation in color intensity\n\n• min: Minimum saturation value\n  - Useful to detect desaturated regions\n\n• max: Maximum saturation value\n  - Useful to detect highly saturated areas"),
+                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average saturation (recommended)\n• min: Least saturated image\n• max: Most saturated image\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
             ],
             outputs=[
                 io.Float.Output("score"),

@@ -25,6 +25,17 @@ All nodes MUST inherit from `io.ComfyNode` (defined in `comfy_compat.py`). This 
 - Must implement `define_schema()`.
 - Must implement `execute()`.
 - Use `io.NodeOutput` for returning results.
+- **Tooltips**: Every input MUST have a descriptive `tooltip` parameter. Tooltips should explain:
+    - What the parameter does.
+    - Expected ranges or units (e.g. 0-255, 0.0-1.0).
+    - Recommendations (e.g. "recommended for general use").
+    - Use bullet points (`•`) for readability in the ComfyUI UI.
+
+Example:
+```python
+io.Enum.Input("aggregation", ["mean", "min", "max"], default="mean", 
+    tooltip="How to combine scores:\n• mean: Average\n• min: Lowest\n• max: Highest")
+```
 
 ### Model Caching
 Deep learning models are heavy. We use a global `ModelCache` (LRU) in `iqa_core.py` to keep models in VRAM.

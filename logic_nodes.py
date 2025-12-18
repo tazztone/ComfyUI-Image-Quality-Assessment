@@ -10,14 +10,14 @@ class PyIQA_EnsembleNode(io.ComfyNode):
             display_name="IQA: Ensemble Scorer",
             category="IQA/Logic",
             inputs=[
-                io.Float.Input("score_1", default=0.0),
-                io.Float.Input("weight_1", default=1.0, min=0.0, max=10.0, step=0.1),
-                io.Float.Input("score_2", default=0.0),
-                io.Float.Input("weight_2", default=1.0, min=0.0, max=10.0, step=0.1),
-                io.Float.Input("score_3", default=0.0),
-                io.Float.Input("weight_3", default=1.0, min=0.0, max=10.0, step=0.1),
-                io.Float.Input("score_4", default=0.0),
-                io.Float.Input("weight_4", default=1.0, min=0.0, max=10.0, step=0.1),
+                io.Float.Input("score_1", default=0.0, tooltip="First IQA score input.\n\nConnect the output score from any IQA node.\nLeave at 0.0 with weight 1.0 if unused."),
+                io.Float.Input("weight_1", default=1.0, min=0.0, max=10.0, step=0.1, tooltip="Weight for score_1 in the ensemble.\n\n• Higher weight = more influence on final score\n• Set to 0.0 to exclude this input\n• Weights are normalized (don't need to sum to 1)"),
+                io.Float.Input("score_2", default=0.0, tooltip="Second IQA score input.\n\nConnect the output score from any IQA node.\nLeave at 0.0 with weight 1.0 if unused."),
+                io.Float.Input("weight_2", default=1.0, min=0.0, max=10.0, step=0.1, tooltip="Weight for score_2 in the ensemble.\n\n• Higher weight = more influence on final score\n• Set to 0.0 to exclude this input\n• Weights are normalized (don't need to sum to 1)"),
+                io.Float.Input("score_3", default=0.0, tooltip="Third IQA score input.\n\nConnect the output score from any IQA node.\nLeave at 0.0 with weight 1.0 if unused."),
+                io.Float.Input("weight_3", default=1.0, min=0.0, max=10.0, step=0.1, tooltip="Weight for score_3 in the ensemble.\n\n• Higher weight = more influence on final score\n• Set to 0.0 to exclude this input\n• Weights are normalized (don't need to sum to 1)"),
+                io.Float.Input("score_4", default=0.0, tooltip="Fourth IQA score input.\n\nConnect the output score from any IQA node.\nLeave at 0.0 with weight 1.0 if unused."),
+                io.Float.Input("weight_4", default=1.0, min=0.0, max=10.0, step=0.1, tooltip="Weight for score_4 in the ensemble.\n\n• Higher weight = more influence on final score\n• Set to 0.0 to exclude this input\n• Weights are normalized (don't need to sum to 1)"),
             ],
             outputs=[
                 io.Float.Output("weighted_score"),
@@ -89,10 +89,10 @@ class IQA_ThresholdFilter(io.ComfyNode):
             display_name="IQA: Threshold Filter",
             category="IQA/Logic",
             inputs=[
-                io.Image.Input("images"),
-                io.Float.Input("scores"),
-                io.Float.Input("threshold", default=0.5, step=0.01),
-                io.Enum.Input("operation", ["greater", "less"], default="greater")
+                io.Image.Input("images", tooltip="Batch of images to filter based on their scores.\n\nImages will be split into 'passed' and 'failed' batches."),
+                io.Float.Input("scores", tooltip="IQA scores corresponding to each image.\n\nConnect from an IQA node's score output.\nCan be a single value (applied to all) or list matching batch size."),
+                io.Float.Input("threshold", default=0.5, step=0.01, tooltip="Score threshold for filtering.\n\n• Images with scores meeting the operation criteria pass\n• Adjust based on your metric's scale\n• Example: LPIPS 0.1 = good quality, BRISQUE 30 = good quality"),
+                io.Enum.Input("operation", ["greater", "less"], default="greater", tooltip="Filter operation to apply:\n\n• greater: Pass images with score > threshold\n  - Good for metrics where higher = better (SSIM, PSNR)\n\n• less: Pass images with score < threshold\n  - Good for metrics where lower = better (LPIPS, BRISQUE)")
             ],
             outputs=[
                 io.Image.Output("passed_images"),
@@ -151,10 +151,10 @@ class IQA_BatchRanker(io.ComfyNode):
             display_name="IQA: Batch Ranker",
             category="IQA/Logic",
             inputs=[
-                io.Image.Input("images"),
-                io.Float.Input("scores"),
-                io.Enum.Input("order", ["descending", "ascending"], default="descending"),
-                io.Int.Input("take_top_n", default=0, min=0)
+                io.Image.Input("images", tooltip="Batch of images to sort by quality.\n\nAll images will be reordered based on their scores."),
+                io.Float.Input("scores", tooltip="IQA scores corresponding to each image.\n\nConnect from an IQA node's raw_scores output.\nMust match the batch size of images."),
+                io.Enum.Input("order", ["descending", "ascending"], default="descending", tooltip="Sort order for ranking:\n\n• descending: Highest scores first\n  - Use for metrics where higher = better (SSIM, aesthetic scores)\n\n• ascending: Lowest scores first\n  - Use for metrics where lower = better (LPIPS, noise level)"),
+                io.Int.Input("take_top_n", default=0, min=0, tooltip="Number of top-ranked images to keep.\n\n• 0: Keep all images (just sort them)\n• 1: Keep only the best image\n• N: Keep top N images after sorting\n\nUseful for batch selection workflows.")
             ],
             outputs=[
                 io.Image.Output("sorted_images"),
