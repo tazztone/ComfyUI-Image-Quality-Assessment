@@ -1,17 +1,18 @@
 """
-Integration tests for ComfyUI-Image-Quality-Assessment nodes.
-Tests execute workflows and verify node registration through ComfyUI API.
+Integration smoke test that loads ComfyUI and verifies IQA nodes register correctly.
+This test requires ComfyUI to be running or startable.
 """
 import pytest
+import json
 import sys
 from pathlib import Path
 
-# Add project root to sys.path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
 
 @pytest.mark.integration
 class TestNodeRegistration:
-    """Test that all ComfyUI-IQA nodes are properly registered"""
+    """Test that all ComfyUI-IQA nodes are properly registered."""
 
     IQA_NODES = [
         "PyIQA_NoReferenceNode",
@@ -43,30 +44,47 @@ class TestNodeRegistration:
 
     @pytest.mark.parametrize("node_class", IQA_NODES)
     def test_node_registered(self, api_client, node_class):
-        """Verify each IQA node is available in object_info"""
+        """Verify each IQA node is available in object_info."""
         assert api_client.node_exists(node_class), f"{node_class} not registered"
+
 
 @pytest.mark.integration
 class TestServerHealth:
-    """Basic ComfyUI server health and node counts"""
+    """Basic ComfyUI server health and node counts."""
 
     def test_server_system_stats(self, api_client):
-        """Test that we can get system stats"""
+        """Test that we can get system stats."""
         stats = api_client.get_system_stats()
         assert "system" in stats
         assert "devices" in stats
 
     def test_iqa_nodes_count(self, api_client):
-        """Verify the expected number of nodes are registered"""
+        """Verify the expected number of IQA nodes are registered."""
         info = api_client.get_object_info()
         iqa_related = [k for k in info.keys() if any(x in k for x in ["IQA_", "PyIQA_", "Analysis_"])]
-        # We expect 25 nodes (8 OpenCV/DL + 3 Logic + 1 Visualizer + 1 Normalizer + 12 Analysis)
-        assert len(iqa_related) >= 24, f"Expected at least 24 IQA nodes, found {len(iqa_related)}"
+        assert len(iqa_related) >= 24, f"Expected at least 24 IQA nodes, found {len(iqa_related)}: {iqa_related}"
+
 
 @pytest.mark.integration
 class TestWorkflowFixtures:
-    """Test loading and basic validation of workflow fixtures"""
+    """Test loading and basic validation of workflow fixtures."""
 
-    def test_fixture_integrity(self, workflow_fixtures_path):
-        """Ensure the workflows/ directory exists and contains expected files (placeholders for now)"""
+    def test_fixture_directory_exists(self, workflow_fixtures_path):
+        """Ensure the workflows/ directory exists."""
         assert workflow_fixtures_path.exists()
+
+    def test_opencv_workflow_valid(self, workflow_fixtures_path):
+        """Test OpenCV workflow fixture is valid JSON."""
+        workflow_file = workflow_fixtures_path / "test_opencv_metrics.json"
+        if workflow_file.exists():
+            with open(workflow_file) as f:
+                workflow = json.load(f)
+            assert isinstance(workflow, dict)
+
+    def test_pyiqa_workflow_valid(self, workflow_fixtures_path):
+        """Test PyIQA workflow fixture is valid JSON."""
+        workflow_file = workflow_fixtures_path / "test_pyiqa_noreference.json"
+        if workflow_file.exists():
+            with open(workflow_file) as f:
+                workflow = json.load(f)
+            assert isinstance(workflow, dict)

@@ -1,11 +1,26 @@
+"""
+Unit tests for score aggregation and normalization.
+Tests utils/iqa_core.py without requiring ComfyUI server.
+"""
+
 import pytest
 import sys
+import importlib.util
 from pathlib import Path
 
-# Add project root to sys.path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add custom node root to path BEFORE any project imports
+custom_node_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(custom_node_root))
 
-from iqa_core import aggregate_scores
+# Load the iqa_core module directly using importlib to bypass package __init__.py
+iqa_core_path = custom_node_root / "utils" / "iqa_core.py"
+spec = importlib.util.spec_from_file_location("iqa_core_module", iqa_core_path)
+iqa_core = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(iqa_core)
+
+# Import what we need from the loaded module
+aggregate_scores = iqa_core.aggregate_scores
+
 
 @pytest.mark.unit
 class TestAggregateScores:
@@ -58,6 +73,7 @@ class TestAggregateScores:
         scores = [1.0, 2.0, 3.0]
         result = aggregate_scores(scores, "invalid")
         assert result == 2.0  # Defaults to mean
+
 
 @pytest.mark.unit
 class TestScoreNormalizerLogic:

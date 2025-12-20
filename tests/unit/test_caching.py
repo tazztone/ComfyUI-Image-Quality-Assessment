@@ -1,11 +1,27 @@
+"""
+Unit tests for model caching and hashing.
+Tests utils/iqa_core.py without requiring ComfyUI server.
+"""
+
 import pytest
 import sys
+import importlib.util
 from pathlib import Path
 
-# Add project root to sys.path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+# Add custom node root to path BEFORE any project imports
+custom_node_root = Path(__file__).parent.parent.parent
+sys.path.insert(0, str(custom_node_root))
 
-from iqa_core import ModelCache, get_hash
+# Load the iqa_core module directly using importlib to bypass package __init__.py
+iqa_core_path = custom_node_root / "utils" / "iqa_core.py"
+spec = importlib.util.spec_from_file_location("iqa_core_module", iqa_core_path)
+iqa_core = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(iqa_core)
+
+# Import what we need from the loaded module
+ModelCache = iqa_core.ModelCache
+get_hash = iqa_core.get_hash
+
 
 @pytest.mark.unit
 class TestModelCache:
@@ -40,6 +56,7 @@ class TestModelCache:
         assert cache.get("key1") == "model1"
         assert cache.get("key2") is None
         assert cache.get("key3") == "model3"
+
 
 @pytest.mark.unit
 class TestGetHash:
