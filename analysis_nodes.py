@@ -7,8 +7,8 @@ from PIL import Image
 from sklearn.cluster import KMeans
 import skimage.restoration
 
-from comfy_compat import io
-from iqa_core import aggregate_scores, tensor_to_numpy, get_hash, InferenceError
+from .comfy_compat import io
+from .iqa_core import aggregate_scores, tensor_to_numpy, get_hash, InferenceError
 
 # Set matplotlib backend to Agg to avoid UI issues
 plt.switch_backend('Agg')
