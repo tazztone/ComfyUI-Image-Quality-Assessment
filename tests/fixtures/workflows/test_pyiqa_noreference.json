@@ -1,0 +1,22 @@
+{
+    "1": {
+        "inputs": {
+            "image": "example.png",
+            "upload": "image"
+        },
+        "class_type": "LoadImage"
+    },
+    "2": {
+        "inputs": {
+            "metric": "maniqa",
+            "device": "cpu",
+            "image": [
+                "1",
+                0
+            ],
+            "aggregation": "mean",
+            "tooltip": ""
+        },
+        "class_type": "PyIQA_NoReferenceNode"
+    }
+}

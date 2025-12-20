@@ -1,0 +1,21 @@
+{
+    "1": {
+        "inputs": {
+            "image": "example.png",
+            "upload": "image"
+        },
+        "class_type": "LoadImage"
+    },
+    "2": {
+        "inputs": {
+            "metric": "blur",
+            "image": [
+                "1",
+                0
+            ],
+            "aggregation": "mean",
+            "tooltip": ""
+        },
+        "class_type": "IQA_Blur_Estimation"
+    }
+}
