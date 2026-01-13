@@ -20,7 +20,7 @@ A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyU
   - **Ensemble**: Combine multiple scores.
   - **Frontend Integration**: Real-time score display on nodes.
 
-## Installation
+### Installation
 
 1. Clone this repository into your `ComfyUI/custom_nodes` folder:
    ```bash
@@ -32,7 +32,7 @@ A comprehensive Image Quality Assessment (IQA) custom node collection for ComfyU
    ```bash
    pip install -r requirements.txt
    ```
-   *Note: This installs `pyiqa`, `opencv-python`, `scikit-image`, `scikit-learn`, `matplotlib`, `torch`, and `torchvision`.*
+   *Note: This version uses a **vendored** version of `pyiqa` to prevent dependency conflicts (like downgrading `transformers` or `numpy`). All original `pyiqa` metrics are available except for `qalign`, which is disabled due to its strict requirement for an older version of `transformers`.*
 
 ## Usage
 

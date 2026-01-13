@@ -71,7 +71,8 @@ class PyIQA_NoReferenceNode(io.ComfyNode, PyIQA_Base):
             try:
                 all_models = pyiqa.list_models()
                 for m in all_models:
-                    if m not in metrics:
+                    # Filter out qalign as it requires strict transformers==4.37.2
+                    if m not in metrics and "qalign" not in m.lower():
                         metrics.append(m)
                 metrics = sorted(list(set(metrics)))
             except:
@@ -127,6 +128,8 @@ class PyIQA_NoReferenceNode(io.ComfyNode, PyIQA_Base):
     def VALIDATE_INPUTS(cls, image, metric, device, aggregation, **kwargs):
         if not PYIQA_AVAILABLE:
             return "PyIQA library not installed"
+        if "qalign" in metric.lower():
+            return "qalign metric is disabled because it requires transformers==4.37.2, which causes conflicts. Use other metrics like hyperiqa or musiq instead."
         if aggregation not in ["mean", "min", "max", "median", "first"]:
             return f"Invalid aggregation: {aggregation}"
         return True
@@ -206,7 +209,8 @@ class PyIQA_FullReferenceNode(io.ComfyNode, PyIQA_Base):
             try:
                 all_models = pyiqa.list_models()
                 for m in all_models:
-                    if m not in metrics:
+                    # Filter out qalign as it requires strict transformers==4.37.2
+                    if m not in metrics and "qalign" not in m.lower():
                         metrics.append(m)
                 metrics = sorted(list(set(metrics)))
             except:
@@ -266,6 +270,8 @@ class PyIQA_FullReferenceNode(io.ComfyNode, PyIQA_Base):
     ):
         if not PYIQA_AVAILABLE:
             return "PyIQA library not installed"
+        if "qalign" in metric.lower():
+            return "qalign metric is disabled because it requires transformers==4.37.2, which causes conflicts. Use other metrics like hyperiqa or musiq instead."
         if (
             distorted_image.shape[0] != reference_image.shape[0]
             and reference_image.shape[0] != 1
