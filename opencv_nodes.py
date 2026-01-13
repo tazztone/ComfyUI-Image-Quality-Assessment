@@ -1,10 +1,11 @@
 import cv2
 import numpy as np
 import torch
-import math
+
 import skimage.restoration
 from .iqa_core import aggregate_scores, tensor_to_numpy, get_hash, InferenceError
 from .comfy_compat import io
+
 
 class IQA_Blur_Estimation(io.ComfyNode):
     @classmethod
@@ -14,16 +15,29 @@ class IQA_Blur_Estimation(io.ComfyNode):
             display_name="IQA: Blur Estimation (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image", tooltip="Input image or batch of images to analyze for blur.\n\nHigher scores indicate sharper images.\nOutputs both a numeric score and a visual blur map."),
-                io.Enum.Input("mode", ["laplacian", "tenengrad"], default="laplacian", tooltip="Blur detection algorithm:\n\n• laplacian: Variance of Laplacian operator (recommended)\n  - Fast and reliable for general blur detection\n  - Higher variance = sharper image\n\n• tenengrad: Gradient magnitude using Sobel operator\n  - Better for detecting motion blur\n  - Measures average edge strength"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Lowest score (blurriest image)\n• max: Highest score (sharpest image)\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
+                io.Image.Input(
+                    "image",
+                    tooltip="Input image or batch of images to analyze for blur.\n\nHigher scores indicate sharper images.\nOutputs both a numeric score and a visual blur map.",
+                ),
+                io.Enum.Input(
+                    "mode",
+                    ["laplacian", "tenengrad"],
+                    default="laplacian",
+                    tooltip="Blur detection algorithm:\n\n• laplacian: Variance of Laplacian operator (recommended)\n  - Fast and reliable for general blur detection\n  - Higher variance = sharper image\n\n• tenengrad: Gradient magnitude using Sobel operator\n  - Better for detecting motion blur\n  - Measures average edge strength",
+                ),
+                io.Enum.Input(
+                    "aggregation",
+                    ["mean", "min", "max", "median", "first"],
+                    default="mean",
+                    tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Lowest score (blurriest image)\n• max: Highest score (sharpest image)\n• median: Middle value, robust to outliers\n• first: Only use first image's score",
+                ),
             ],
             outputs=[
                 io.Float.Output("score"),
                 io.String.Output("score_text"),
                 io.Image.Output("blur_map"),
-                io.Float.Output("raw_scores")
-            ]
+                io.Float.Output("raw_scores"),
+            ],
         )
 
     @classmethod
@@ -32,9 +46,12 @@ class IQA_Blur_Estimation(io.ComfyNode):
 
     @classmethod
     def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
-        if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation method: {aggregation}"
-        if mode not in ["laplacian", "tenengrad"]: return f"Invalid mode: {mode}"
+        if image is None:
+            return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]:
+            return f"Invalid aggregation method: {aggregation}"
+        if mode not in ["laplacian", "tenengrad"]:
+            return f"Invalid mode: {mode}"
         return True
 
     @classmethod
@@ -68,7 +85,7 @@ class IQA_Blur_Estimation(io.ComfyNode):
                     gx = cv2.Sobel(img_gray, cv2.CV_64F, 1, 0, ksize=3)
                     gy = cv2.Sobel(img_gray, cv2.CV_64F, 0, 1, ksize=3)
                     magnitude = np.sqrt(gx**2 + gy**2)
-                    score = np.mean(magnitude) # Average gradient magnitude
+                    score = np.mean(magnitude)  # Average gradient magnitude
 
                     # Map
                     mag_norm = cv2.normalize(magnitude, None, 0, 255, cv2.NORM_MINMAX)
@@ -95,8 +112,9 @@ class IQA_Blur_Estimation(io.ComfyNode):
 
         return {
             "ui": {"text": [score_text]},
-            "result": io.NodeOutput(final_score, score_text, maps_out, scores)
+            "result": io.NodeOutput(final_score, score_text, maps_out, scores),
         }
+
 
 class IQA_Brightness_Contrast(io.ComfyNode):
     @classmethod
@@ -106,15 +124,28 @@ class IQA_Brightness_Contrast(io.ComfyNode):
             display_name="IQA: Brightness & Contrast (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nConverts to grayscale internally for brightness/contrast calculations."),
-                io.Enum.Input("mode", ["brightness", "contrast", "exposure_score"], default="brightness", tooltip="What to measure:\n\n• brightness: Average pixel intensity (0-255 scale)\n  - 0 = pure black, 255 = pure white\n  - Ideal range: 100-150 for most images\n\n• contrast: Standard deviation of pixel values\n  - Higher = more contrast\n  - Low values indicate flat/washed out images\n\n• exposure_score: Exposure quality (0-1 scale)\n  - Penalizes under/overexposed pixels\n  - 1.0 = well exposed, 0.0 = poorly exposed"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Lowest score in batch\n• max: Highest score in batch\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
+                io.Image.Input(
+                    "image",
+                    tooltip="Input image or batch of images to analyze.\n\nConverts to grayscale internally for brightness/contrast calculations.",
+                ),
+                io.Enum.Input(
+                    "mode",
+                    ["brightness", "contrast", "exposure_score"],
+                    default="brightness",
+                    tooltip="What to measure:\n\n• brightness: Average pixel intensity (0-255 scale)\n  - 0 = pure black, 255 = pure white\n  - Ideal range: 100-150 for most images\n\n• contrast: Standard deviation of pixel values\n  - Higher = more contrast\n  - Low values indicate flat/washed out images\n\n• exposure_score: Exposure quality (0-1 scale)\n  - Penalizes under/overexposed pixels\n  - 1.0 = well exposed, 0.0 = poorly exposed",
+                ),
+                io.Enum.Input(
+                    "aggregation",
+                    ["mean", "min", "max", "median", "first"],
+                    default="mean",
+                    tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Lowest score in batch\n• max: Highest score in batch\n• median: Middle value, robust to outliers\n• first: Only use first image's score",
+                ),
             ],
             outputs=[
                 io.Float.Output("score"),
                 io.String.Output("score_text"),
-                io.Float.Output("raw_scores")
-            ]
+                io.Float.Output("raw_scores"),
+            ],
         )
 
     @classmethod
@@ -123,8 +154,10 @@ class IQA_Brightness_Contrast(io.ComfyNode):
 
     @classmethod
     def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
-        if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation method: {aggregation}"
+        if image is None:
+            return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]:
+            return f"Invalid aggregation method: {aggregation}"
         return True
 
     @classmethod
@@ -166,8 +199,9 @@ class IQA_Brightness_Contrast(io.ComfyNode):
 
         return {
             "ui": {"text": [score_text]},
-            "result": io.NodeOutput(final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores),
         }
+
 
 class IQA_Colorfulness(io.ComfyNode):
     @classmethod
@@ -177,14 +211,22 @@ class IQA_Colorfulness(io.ComfyNode):
             display_name="IQA: Colorfulness (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nMeasures color variety and saturation using the Hasler-Süsstrunk colorfulness metric."),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Least colorful image\n• max: Most colorful image\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
+                io.Image.Input(
+                    "image",
+                    tooltip="Input image or batch of images to analyze.\n\nMeasures color variety and saturation using the Hasler-Süsstrunk colorfulness metric.",
+                ),
+                io.Enum.Input(
+                    "aggregation",
+                    ["mean", "min", "max", "median", "first"],
+                    default="mean",
+                    tooltip="How to combine scores from batch images:\n\n• mean: Average of all scores (recommended)\n• min: Least colorful image\n• max: Most colorful image\n• median: Middle value, robust to outliers\n• first: Only use first image's score",
+                ),
             ],
             outputs=[
                 io.Float.Output("score"),
                 io.String.Output("score_text"),
-                io.Float.Output("raw_scores")
-            ]
+                io.Float.Output("raw_scores"),
+            ],
         )
 
     @classmethod
@@ -193,8 +235,10 @@ class IQA_Colorfulness(io.ComfyNode):
 
     @classmethod
     def VALIDATE_INPUTS(cls, image, aggregation, **kwargs):
-        if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
+        if image is None:
+            return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]:
+            return f"Invalid aggregation: {aggregation}"
         return True
 
     @classmethod
@@ -210,8 +254,8 @@ class IQA_Colorfulness(io.ComfyNode):
                 yb = np.absolute(0.5 * (R + G) - B)
                 (rbMean, rbStd) = (np.mean(rg), np.std(rg))
                 (ybMean, ybStd) = (np.mean(yb), np.std(yb))
-                stdRoot = np.sqrt((rbStd ** 2) + (ybStd ** 2))
-                meanRoot = np.sqrt((rbMean ** 2) + (ybMean ** 2))
+                stdRoot = np.sqrt((rbStd**2) + (ybStd**2))
+                meanRoot = np.sqrt((rbMean**2) + (ybMean**2))
                 score = stdRoot + (0.3 * meanRoot)
                 scores.append(score)
         except Exception as e:
@@ -222,8 +266,9 @@ class IQA_Colorfulness(io.ComfyNode):
 
         return {
             "ui": {"text": [score_text]},
-            "result": io.NodeOutput(final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores),
         }
+
 
 class IQA_Noise_Estimation(io.ComfyNode):
     @classmethod
@@ -233,14 +278,22 @@ class IQA_Noise_Estimation(io.ComfyNode):
             display_name="IQA: Noise Estimation (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image", tooltip="Input image or batch of images to analyze for noise.\n\nUses Donoho's Median Absolute Deviation (MAD) method via wavelet decomposition.\nHigher values indicate more noise."),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average noise level (recommended)\n• min: Cleanest image in batch\n• max: Noisiest image in batch\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
+                io.Image.Input(
+                    "image",
+                    tooltip="Input image or batch of images to analyze for noise.\n\nUses Donoho's Median Absolute Deviation (MAD) method via wavelet decomposition.\nHigher values indicate more noise.",
+                ),
+                io.Enum.Input(
+                    "aggregation",
+                    ["mean", "min", "max", "median", "first"],
+                    default="mean",
+                    tooltip="How to combine scores from batch images:\n\n• mean: Average noise level (recommended)\n• min: Cleanest image in batch\n• max: Noisiest image in batch\n• median: Middle value, robust to outliers\n• first: Only use first image's score",
+                ),
             ],
             outputs=[
                 io.Float.Output("score"),
                 io.String.Output("score_text"),
-                io.Float.Output("raw_scores")
-            ]
+                io.Float.Output("raw_scores"),
+            ],
         )
 
     @classmethod
@@ -249,8 +302,10 @@ class IQA_Noise_Estimation(io.ComfyNode):
 
     @classmethod
     def VALIDATE_INPUTS(cls, image, aggregation, **kwargs):
-        if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
+        if image is None:
+            return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]:
+            return f"Invalid aggregation: {aggregation}"
         return True
 
     @classmethod
@@ -268,7 +323,9 @@ class IQA_Noise_Estimation(io.ComfyNode):
                 # Normalize to 0-1 for skimage consistency if needed?
                 # skimage usually works with float 0-1 or uint8.
                 # Let's pass the uint8 img_np directly, it handles it.
-                sigma = skimage.restoration.estimate_sigma(img_np, channel_axis=-1, average_sigmas=True)
+                sigma = skimage.restoration.estimate_sigma(
+                    img_np, channel_axis=-1, average_sigmas=True
+                )
 
                 scores.append(float(sigma))
         except Exception as e:
@@ -279,12 +336,13 @@ class IQA_Noise_Estimation(io.ComfyNode):
 
         return {
             "ui": {"text": [score_text]},
-            "result": io.NodeOutput(final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores),
         }
 
 
 class IQA_EdgeDensity(io.ComfyNode):
     """Measures edge density using Canny edge detection."""
+
     @classmethod
     def define_schema(cls):
         return io.Schema(
@@ -292,17 +350,37 @@ class IQA_EdgeDensity(io.ComfyNode):
             display_name="IQA: Edge Density (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nMeasures edge density as percentage of edge pixels.\nHigher scores indicate more detailed/complex images."),
-                io.Int.Input("low_threshold", default=50, min=0, max=255, tooltip="Canny edge detector lower threshold (0-255).\n\n• Lower values detect more edges (including noise)\n• Higher values detect only strong edges\n• Must be less than high_threshold\n• Default 50 works well for most images"),
-                io.Int.Input("high_threshold", default=150, min=0, max=255, tooltip="Canny edge detector upper threshold (0-255).\n\n• Edges above this are always kept\n• Edges between low and high are kept if connected to strong edges\n• Higher values = fewer, stronger edges only\n• Default 150 works well for most images"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average edge density (recommended)\n• min: Image with least edges\n• max: Image with most edges\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
+                io.Image.Input(
+                    "image",
+                    tooltip="Input image or batch of images to analyze.\n\nMeasures edge density as percentage of edge pixels.\nHigher scores indicate more detailed/complex images.",
+                ),
+                io.Int.Input(
+                    "low_threshold",
+                    default=50,
+                    min=0,
+                    max=255,
+                    tooltip="Canny edge detector lower threshold (0-255).\n\n• Lower values detect more edges (including noise)\n• Higher values detect only strong edges\n• Must be less than high_threshold\n• Default 50 works well for most images",
+                ),
+                io.Int.Input(
+                    "high_threshold",
+                    default=150,
+                    min=0,
+                    max=255,
+                    tooltip="Canny edge detector upper threshold (0-255).\n\n• Edges above this are always kept\n• Edges between low and high are kept if connected to strong edges\n• Higher values = fewer, stronger edges only\n• Default 150 works well for most images",
+                ),
+                io.Enum.Input(
+                    "aggregation",
+                    ["mean", "min", "max", "median", "first"],
+                    default="mean",
+                    tooltip="How to combine scores from batch images:\n\n• mean: Average edge density (recommended)\n• min: Image with least edges\n• max: Image with most edges\n• median: Middle value, robust to outliers\n• first: Only use first image's score",
+                ),
             ],
             outputs=[
                 io.Float.Output("score"),
                 io.String.Output("score_text"),
                 io.Image.Output("edge_map"),
-                io.Float.Output("raw_scores")
-            ]
+                io.Float.Output("raw_scores"),
+            ],
         )
 
     @classmethod
@@ -310,10 +388,15 @@ class IQA_EdgeDensity(io.ComfyNode):
         return get_hash([low_threshold, high_threshold, aggregation])
 
     @classmethod
-    def VALIDATE_INPUTS(cls, image, low_threshold, high_threshold, aggregation, **kwargs):
-        if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
-        if low_threshold >= high_threshold: return "Low threshold must be less than high threshold."
+    def VALIDATE_INPUTS(
+        cls, image, low_threshold, high_threshold, aggregation, **kwargs
+    ):
+        if image is None:
+            return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]:
+            return f"Invalid aggregation: {aggregation}"
+        if low_threshold >= high_threshold:
+            return "Low threshold must be less than high threshold."
         return True
 
     @classmethod
@@ -355,12 +438,13 @@ class IQA_EdgeDensity(io.ComfyNode):
 
         return {
             "ui": {"text": [score_text]},
-            "result": io.NodeOutput(final_score, score_text, maps_out, scores)
+            "result": io.NodeOutput(final_score, score_text, maps_out, scores),
         }
 
 
 class IQA_Saturation(io.ComfyNode):
     """Measures average color saturation using HSV colorspace."""
+
     @classmethod
     def define_schema(cls):
         return io.Schema(
@@ -368,15 +452,28 @@ class IQA_Saturation(io.ComfyNode):
             display_name="IQA: Saturation (OpenCV)",
             category="IQA/OpenCV",
             inputs=[
-                io.Image.Input("image", tooltip="Input image or batch of images to analyze.\n\nConverts to HSV colorspace and analyzes the Saturation channel.\nScore is on 0-100 scale (percentage saturation)."),
-                io.Enum.Input("mode", ["mean", "std", "min", "max"], default="mean", tooltip="What statistic to compute from saturation channel:\n\n• mean: Average saturation (recommended)\n  - Higher = more vibrant colors overall\n\n• std: Standard deviation of saturation\n  - Higher = more variation in color intensity\n\n• min: Minimum saturation value\n  - Useful to detect desaturated regions\n\n• max: Maximum saturation value\n  - Useful to detect highly saturated areas"),
-                io.Enum.Input("aggregation", ["mean", "min", "max", "median", "first"], default="mean", tooltip="How to combine scores from batch images:\n\n• mean: Average saturation (recommended)\n• min: Least saturated image\n• max: Most saturated image\n• median: Middle value, robust to outliers\n• first: Only use first image's score"),
+                io.Image.Input(
+                    "image",
+                    tooltip="Input image or batch of images to analyze.\n\nConverts to HSV colorspace and analyzes the Saturation channel.\nScore is on 0-100 scale (percentage saturation).",
+                ),
+                io.Enum.Input(
+                    "mode",
+                    ["mean", "std", "min", "max"],
+                    default="mean",
+                    tooltip="What statistic to compute from saturation channel:\n\n• mean: Average saturation (recommended)\n  - Higher = more vibrant colors overall\n\n• std: Standard deviation of saturation\n  - Higher = more variation in color intensity\n\n• min: Minimum saturation value\n  - Useful to detect desaturated regions\n\n• max: Maximum saturation value\n  - Useful to detect highly saturated areas",
+                ),
+                io.Enum.Input(
+                    "aggregation",
+                    ["mean", "min", "max", "median", "first"],
+                    default="mean",
+                    tooltip="How to combine scores from batch images:\n\n• mean: Average saturation (recommended)\n• min: Least saturated image\n• max: Most saturated image\n• median: Middle value, robust to outliers\n• first: Only use first image's score",
+                ),
             ],
             outputs=[
                 io.Float.Output("score"),
                 io.String.Output("score_text"),
-                io.Float.Output("raw_scores")
-            ]
+                io.Float.Output("raw_scores"),
+            ],
         )
 
     @classmethod
@@ -385,9 +482,12 @@ class IQA_Saturation(io.ComfyNode):
 
     @classmethod
     def VALIDATE_INPUTS(cls, image, mode, aggregation, **kwargs):
-        if image is None: return "Image input is missing."
-        if aggregation not in ["mean", "min", "max", "median", "first"]: return f"Invalid aggregation: {aggregation}"
-        if mode not in ["mean", "std", "min", "max"]: return f"Invalid mode: {mode}"
+        if image is None:
+            return "Image input is missing."
+        if aggregation not in ["mean", "min", "max", "median", "first"]:
+            return f"Invalid aggregation: {aggregation}"
+        if mode not in ["mean", "std", "min", "max"]:
+            return f"Invalid mode: {mode}"
         return True
 
     @classmethod
@@ -424,5 +524,5 @@ class IQA_Saturation(io.ComfyNode):
 
         return {
             "ui": {"text": [score_text]},
-            "result": io.NodeOutput(final_score, score_text, scores)
+            "result": io.NodeOutput(final_score, score_text, scores),
         }

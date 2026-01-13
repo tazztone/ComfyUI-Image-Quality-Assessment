@@ -5,7 +5,7 @@ from .opencv_nodes import (
     IQA_Colorfulness,
     IQA_Noise_Estimation,
     IQA_EdgeDensity,
-    IQA_Saturation
+    IQA_Saturation,
 )
 from .logic_nodes import PyIQA_EnsembleNode, IQA_ThresholdFilter, IQA_BatchRanker
 from .visualization_nodes import IQA_HeatmapVisualizer
@@ -22,7 +22,11 @@ from .analysis_nodes import (
     Analysis_Entropy,
     Analysis_NoiseEstimation,
     Analysis_RGBHistogram,
-    Analysis_SharpnessFocusScore
+    Analysis_SharpnessFocusScore,
+)
+from .dataset_nodes import (
+    LoadImageDataSetFromFolderNode_Custom,
+    LoadImageTextDataSetFromFolderNode_Custom,
 )
 
 NODE_CLASS_MAPPINGS = {
@@ -51,6 +55,8 @@ NODE_CLASS_MAPPINGS = {
     "Analysis_NoiseEstimation": Analysis_NoiseEstimation,
     "Analysis_RGBHistogram": Analysis_RGBHistogram,
     "Analysis_SharpnessFocusScore": Analysis_SharpnessFocusScore,
+    "LoadImageDataSetFromFolder_Custom": LoadImageDataSetFromFolderNode_Custom,
+    "LoadImageTextDataSetFromFolder_Custom": LoadImageTextDataSetFromFolderNode_Custom,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
@@ -79,6 +85,8 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Analysis_NoiseEstimation": "Analysis: Noise Estimation",
     "Analysis_RGBHistogram": "Analysis: RGB Histogram",
     "Analysis_SharpnessFocusScore": "Analysis: Sharpness/Focus",
+    "LoadImageDataSetFromFolder_Custom": "IQA: Load Image Dataset",
+    "LoadImageTextDataSetFromFolder_Custom": "IQA: Load Image & Text Dataset",
 }
 
 WEB_DIRECTORY = "./web/js"

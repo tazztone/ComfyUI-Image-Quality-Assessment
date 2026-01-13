@@ -454,7 +454,7 @@
     },
     {
       "id": 11,
-      "type": "Analysis_BlurDetection",
+      "type": "Blur Detection",
       "pos": [
         1000,
         50
@@ -498,7 +498,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_BlurDetection"
+        "Node name for S&R": "Blur Detection"
       },
       "widgets_values": [
         32,
@@ -508,7 +508,7 @@
     },
     {
       "id": 12,
-      "type": "Analysis_ColorHarmony",
+      "type": "Color Harmony Analyzer",
       "pos": [
         1000,
         260
@@ -552,7 +552,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_ColorHarmony"
+        "Node name for S&R": "Color Harmony Analyzer"
       },
       "widgets_values": [
         3,
@@ -562,7 +562,7 @@
     },
     {
       "id": 13,
-      "type": "Analysis_Clipping",
+      "type": "Clipping Analysis",
       "pos": [
         1000,
         470
@@ -606,7 +606,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_Clipping"
+        "Node name for S&R": "Clipping Analysis"
       },
       "widgets_values": [
         "Highlight/Shadow Clipping",
@@ -617,7 +617,7 @@
     },
     {
       "id": 14,
-      "type": "Analysis_ColorCast",
+      "type": "Color Cast Detector",
       "pos": [
         1000,
         690
@@ -661,7 +661,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_ColorCast"
+        "Node name for S&R": "Color Cast Detector"
       },
       "widgets_values": [
         0.05,
@@ -672,7 +672,7 @@
     },
     {
       "id": 15,
-      "type": "Analysis_ColorTemperature",
+      "type": "Color Temperature Estimator",
       "pos": [
         1000,
         920
@@ -716,7 +716,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_ColorTemperature"
+        "Node name for S&R": "Color Temperature Estimator"
       },
       "widgets_values": [
         "mean"
@@ -724,7 +724,7 @@
     },
     {
       "id": 16,
-      "type": "Analysis_Contrast",
+      "type": "Contrast Analysis",
       "pos": [
         1000,
         1090
@@ -763,7 +763,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_Contrast"
+        "Node name for S&R": "Contrast Analysis"
       },
       "widgets_values": [
         "Hybrid",
@@ -775,7 +775,7 @@
     },
     {
       "id": 17,
-      "type": "Analysis_Defocus",
+      "type": "Defocus Analysis",
       "pos": [
         1500,
         50
@@ -824,7 +824,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_Defocus"
+        "Node name for S&R": "Defocus Analysis"
       },
       "widgets_values": [
         "FFT Ratio (Sum)",
@@ -835,7 +835,7 @@
     },
     {
       "id": 18,
-      "type": "Analysis_EdgeDensity",
+      "type": "Edge Density Analysis",
       "pos": [
         1500,
         280
@@ -884,7 +884,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_EdgeDensity"
+        "Node name for S&R": "Edge Density Analysis"
       },
       "widgets_values": [
         "Canny",
@@ -895,7 +895,7 @@
     },
     {
       "id": 19,
-      "type": "Analysis_Entropy",
+      "type": "Entropy Analysis",
       "pos": [
         1500,
         500
@@ -939,7 +939,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_Entropy"
+        "Node name for S&R": "Entropy Analysis"
       },
       "widgets_values": [
         32,
@@ -949,7 +949,7 @@
     },
     {
       "id": 20,
-      "type": "Analysis_NoiseEstimation",
+      "type": "Noise Estimation",
       "pos": [
         1500,
         710
@@ -993,7 +993,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_NoiseEstimation"
+        "Node name for S&R": "Noise Estimation"
       },
       "widgets_values": [
         "MAD",
@@ -1003,7 +1003,7 @@
     },
     {
       "id": 21,
-      "type": "Analysis_RGBHistogram",
+      "type": "RGB Histogram Renderer",
       "pos": [
         1500,
         930
@@ -1037,7 +1037,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_RGBHistogram"
+        "Node name for S&R": "RGB Histogram Renderer"
       },
       "widgets_values": [
         256
@@ -1045,7 +1045,7 @@
     },
     {
       "id": 22,
-      "type": "Analysis_SharpnessFocusScore",
+      "type": "Sharpness / Focus Score",
       "pos": [
         1500,
         1110
@@ -1089,7 +1089,7 @@
         }
       ],
       "properties": {
-        "Node name for S&R": "Analysis_SharpnessFocusScore"
+        "Node name for S&R": "Sharpness / Focus Score"
       },
       "widgets_values": [
         "Laplacian",
