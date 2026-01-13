@@ -1,9 +1,9 @@
 import { app } from "../../scripts/app.js";
 
 app.registerExtension({
-	name: "ComfyUI.IQA.ScoreDisplay",
-	async beforeRegisterNodeDef(nodeType, nodeData, app) {
-		if (nodeData.category && (nodeData.category.startsWith("IQA"))) {
+    name: "ComfyUI.IQA.ScoreDisplay",
+    async beforeRegisterNodeDef(nodeType, nodeData, app) {
+        if (nodeData.category && nodeData.category.startsWith("IQA") && !nodeData.category.startsWith("IQA/Dataset")) {
 
             // Add a widget to display the score
             const onNodeCreated = nodeType.prototype.onNodeCreated;
@@ -14,12 +14,12 @@ app.registerExtension({
                 // In LiteGraph/ComfyUI, text widgets are drawn on canvas.
                 // There is no HTML input element unless it's a DOM widget.
                 // We just add it and will update its value.
-                const w = this.addWidget("text", "last_score", "0.00", function(v) {}, { serialize: false });
+                const w = this.addWidget("text", "last_score", "0.00", function (v) { }, { serialize: false });
             };
 
             // Update the widget when execution finishes
             const onExecutedOriginal = nodeType.prototype.onExecuted;
-            nodeType.prototype.onExecuted = function(message) {
+            nodeType.prototype.onExecuted = function (message) {
                 onExecutedOriginal?.apply(this, arguments);
 
                 // The backend returns {"ui": {"text": [score_str]}} which populates 'message.text' here.
@@ -34,6 +34,6 @@ app.registerExtension({
                     }
                 }
             }
-		}
-	},
+        }
+    },
 });
