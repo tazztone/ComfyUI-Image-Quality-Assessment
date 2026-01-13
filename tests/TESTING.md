@@ -1,129 +1,124 @@
-# ComfyUI-Image-Quality-Assessment Testing Guide
+# Testing Guide: ComfyUI-Image-Quality-Assessment
 
-## Quick Start
+This repository uses a comprehensive test suite to ensure the stability of IQA nodes. The tests are designed to run both **standalone** (unit tests) and **integrated** (with a live ComfyUI server).
 
-```bash
+---
+
+## 🚀 Quick Start
+
+### 1. Configure VS Code (Recommended)
+This repository includes a `.vscode/settings.json` that pre-configures the correct Python environment and test arguments.
+
+1.  Open this folder in VS Code.
+2.  Go to the **Testing** tab (flask icon).
+3.  Click "Refresh Tests".
+4.  Run any test directly from the UI.
+
+> **Note:** If tests are not found, ensure your Python interpreter is set to the ComfyUI virtual environment: `venv\Scripts\python.exe`.
+
+### 2. Run from Command Line
+You can use the provided `run_tests.py` script which handles environment setup automatically.
+
+```powershell
 cd C:\_stability_matrix\Data\Packages\Comfy-new\custom_nodes\ComfyUI-Image-Quality-Assessment
 
-# Run all tests via the test runner script
+# Run ALL tests
 ..\..\venv\Scripts\python run_tests.py
 
-# Run only unit tests (no ComfyUI server needed)
+# Run ONLY Unit Tests (Fast, no server needed)
 ..\..\venv\Scripts\python run_tests.py -m unit
 
-# Run integration tests (requires ComfyUI on port 8188)
+# Run ONLY Integration Tests (Requires ComfyUI running)
 ..\..\venv\Scripts\python run_tests.py -m integration
 ```
 
 ---
 
-## Test Categories
+## 🧪 Test Suite Structure
 
-### Unit Tests
-Fast tests that validate utility functions without ComfyUI.
+The tests are split into two categories to ensure fast feedback loops while still verifying full functionality.
 
-| Module | Tests | Description |
-|--------|-------|-------------|
-| `test_aggregation.py` | 11 | Score aggregation, normalization logic |
-| `test_caching.py` | 5 | ModelCache LRU, hash generation |
-| `test_metrics.py` | 2 | Tensor conversion, colorfulness math |
-| `test_syntax.py` | 12 | File syntax validation, __init__.py structure |
+### Unit Tests (`tests/unit/`)
+*   **Speed:** Fast (< 1s)
+*   **Dependencies:** None (Standalone)
+*   **Purpose:** Verify internal logic, math, and syntax without loading ComfyUI.
 
-### Integration Tests
-Tests that run against a live ComfyUI server.
+| File | Description |
+| :--- | :--- |
+| `test_logic_nodes.py` | Validates core node logic (Score Normalizer, Ensemble, Ranker, Filter). |
+| `test_aggregation.py` | Checks score aggregation math and basic normalization. |
+| `test_caching.py` | Verifies the caching mechanism (LRU eviction, hashing). |
+| `test_metrics.py` | Tests tensor-to-numpy conversion and standalone metric math. |
+| `test_syntax.py` | Ensures all files are valid Python and follow strict import rules. |
 
-| Category | Tests | Description |
-|----------|-------|-------------|
-| Node Registration | 25 | Verify all IQA nodes are registered |
-| Server Health | 2 | API endpoints, node counts |
-| Workflow Fixtures | 3 | Load and validate workflow JSON files |
+### Integration Tests (`tests/integration/`)
+*   **Speed:** Slow (Requires network)
+*   **Dependencies:** Running ComfyUI Server (Port 8188)
+*   **Purpose:** Verify node registration, API endpoints, and workflow validity.
 
----
-
-## Test Markers
-
-```bash
-python run_tests.py -m unit           # Fast, no server
-python run_tests.py -m integration    # Requires ComfyUI
-```
+| Category | Description |
+| :--- | :--- |
+| **Node Registration** | Checks that all 25+ IQA nodes are correctly registered with the server. |
+| **Server Health** | Verifies the ComfyUI API is reachable and healthy. |
+| **Workflows** | Loads sample workflows (`fixtures/workflows/*.json`) to ensure they are valid. |
 
 ---
 
-## Running Integration Tests
+## 🛠 Developer Guide
 
-Integration tests require ComfyUI to be running:
+### Writing Unit Tests
+Unit tests must differ from standard Python tests because they cannot import the main package directly (due to relative imports in ComfyUI nodes).
 
-```bash
-# Terminal 1: Start ComfyUI
-cd C:\_stability_matrix\Data\Packages\Comfy-new
-venv\Scripts\python main.py
-
-# Terminal 2: Run tests
-cd custom_nodes\ComfyUI-Image-Quality-Assessment
-..\..\venv\Scripts\python run_tests.py -m integration
-```
-
----
-
-## For Developers
-
-### Adding Unit Tests
-
-1. Create test file in `tests/unit/test_*.py`
-2. Mark tests with `@pytest.mark.unit`
-3. Import modules using `importlib` to bypass package `__init__.py`
-
+**Pattern for testing nodes:**
+Use the custom loader shown in `tests/unit/test_logic_nodes.py`:
 ```python
-import pytest
-import sys
-import importlib.util
-from pathlib import Path
-
-# Load module directly
-custom_node_root = Path(__file__).parent.parent.parent
-iqa_core_path = custom_node_root / "utils" / "iqa_core.py"
-spec = importlib.util.spec_from_file_location("iqa_core", iqa_core_path)
-iqa_core = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(iqa_core)
-
-@pytest.mark.unit
-class TestMyFeature:
-    def test_something(self):
-        result = iqa_core.aggregate_scores([1, 2, 3], "mean")
-        assert result == 2.0
+# Helper to load modules with relative imports
+def load_module_into_package(filename, submodule_name):
+    # ... (See test_logic_nodes.py for full helper)
 ```
+This isolates the node logic from the rest of the ComfyUI system.
 
-### Adding Integration Tests
-
-1. Create test in `tests/integration/test_*.py`
-2. Mark with `@pytest.mark.integration`
-3. Use provided fixtures: `api_client`, `workflow_fixtures_path`
-
+### Writing Integration Tests
+Integration tests use the `api_client` fixture to talk to the server.
 ```python
 @pytest.mark.integration
-def test_node_registered(self, api_client):
-    assert api_client.node_exists("PyIQA_NoReferenceNode")
+def test_my_node_exists(self, api_client):
+    assert api_client.node_exists("MyNewNode")
 ```
+
+### Running Integration Tests Manually
+1.  **Terminal 1:** Start ComfyUI
+    ```powershell
+    cd C:\_stability_matrix\Data\Packages\Comfy-new
+    venv\Scripts\python main.py
+    ```
+2.  **Terminal 2:** Run Tests
+    ```powershell
+    cd custom_nodes\ComfyUI-Image-Quality-Assessment
+    ..\..\venv\Scripts\python run_tests.py -m integration
+    ```
 
 ---
 
-## Architectural Notes & Roadblocks
+## 🧩 Architecture & Troubleshooting
 
-This testing suite encountered several critical roadblocks during implementation that are documented here for future maintainers:
+### Why is the setup complex?
+ComfyUI custom nodes use **relative imports** (e.g., `from . import node`). This works great inside ComfyUI but breaks standard `pytest` discovery because `pytest` doesn't treat the root folder as a package.
 
-### 1. Pytest Package Discovery vs. ComfyUI
-The main `__init__.py` uses relative imports (`from .pyiqa_nodes import ...`). If `pytest` is run from the project root, it attempts to import the package, which fails with `ImportError: attempted relative import with no known parent package`.
+### Key Solutions Implemented
+1.  **Test Runner (`run_tests.py`)**:
+    *   Changes the working directory to `tests/`.
+    *   This forces pytest to see `tests/` as the root, avoiding the "attempted relative import" error.
+2.  **VS Code Configuration**:
+    *   `"python.testing.cwd": "${workspaceFolder}/tests"`: Mimics the runner behavior.
+    *   `"python.testing.pytestArgs": ["."]` : Tells pytest to look in the *current* directory (which is `tests/`).
+    *   If you see "No tests found", verify these settings in `.vscode/settings.json`.
+3.  **Lazy Imports in `conftest.py`**:
+    *   The `requests` library is imported *inside* fixtures, not at the top level.
+    *   This ensures Unit Tests can run even if `requests` is missing or the environment is minimal.
 
-**Solution:** The `run_tests.py` runner changes directory to `tests/` before executing pytest. This prevents pytest from treating the root as a package and discovering the root `__init__.py`.
-
-### 2. Parent pytest.ini Interference
-In some environments (like Stability Matrix), a parent `pytest.ini` might exist with `pythonpath = .`. This forces pytest to add the parent directory to `sys.path`, again triggering package discovery issues.
-
-**Solution:** A local `tests/pytest.ini` with `pythonpath = ` (empty) overrides any parent settings and ensures a clean test environment.
-
-### 3. Module Dependency Isolation
-Most node modules in this repo depend on `comfy_compat.py`. Standalone unit tests can only safely test the `utils/iqa_core.py` module, which is kept free of ComfyUI dependencies.
-
-### 4. Implementation summary
-*   **TTS Pattern:** This repo strictly follows the `run_tests.py` and `tests/` isolation pattern established in TTS-Audio-Suite.
-*   **Env Check:** Do **not** use `COMFYUI_TESTING` inside `__init__.py` to skip imports; this breaks node registration in the actual ComfyUI server. Isolation must be handled at the test runner level.
+### Common Issues
+*   **Error:** `ImportError: attempted relative import with no known parent package`
+    *   **Fix:** Ensure you are running tests via `run_tests.py` or have VS Code configured to run from the `tests/` directory. Do **not** run `pytest` directly from the project root.
+*   **Error:** `ModuleNotFoundError: No module named 'requests'`
+    *   **Fix:** Ensure you are using the ComfyUI virtual environment (`venv\Scripts\python.exe`). Unit tests should still run, but integration tests will fail.

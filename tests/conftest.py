@@ -29,7 +29,6 @@ for _module_name in _MOCK_MODULES:
         sys.modules[_module_name] = MagicMock()
 
 import pytest
-import requests
 from pathlib import Path
 from typing import Dict, Any
 
@@ -47,11 +46,13 @@ class ComfyUIAPIClient:
         self.base_url = base_url
     
     def get_system_stats(self) -> Dict[str, Any]:
+        import requests
         response = requests.get(f"{self.base_url}/system_stats", timeout=5)
         response.raise_for_status()
         return response.json()
     
     def get_object_info(self) -> Dict[str, Any]:
+        import requests
         response = requests.get(f"{self.base_url}/object_info", timeout=30)
         response.raise_for_status()
         return response.json()
@@ -67,6 +68,7 @@ class ComfyUIAPIClient:
 @pytest.fixture(scope="session")
 def comfyui_server():
     """Connect to running ComfyUI server or skip."""
+    import requests
     for port in [8188, 8199]:
         try:
             url = f"http://127.0.0.1:{port}"

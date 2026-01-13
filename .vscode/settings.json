@@ -1,0 +1,9 @@
+{
+    "python.defaultInterpreterPath": "C:\\_stability_matrix\\Data\\Packages\\Comfy-new\\venv\\Scripts\\python.exe",
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true,
+    "python.testing.cwd": "${workspaceFolder}/tests"
+}
