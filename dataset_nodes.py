@@ -32,7 +32,9 @@ def load_and_process_images(image_files, input_dir):
     return output_images
 
 
-def get_image_files_from_folder(folder, start_index, max_items, folder_path=None):
+def get_image_files_from_folder(
+    folder, start_index, max_items, folder_path=None, recursive=False
+):
     if folder_path and os.path.exists(folder_path):
         sub_input_dir = folder_path
         logging.info(f"Loading images from custom path: {folder_path}")
@@ -53,7 +55,7 @@ def get_image_files_from_folder(folder, start_index, max_items, folder_path=None
         path = os.path.join(sub_input_dir, item)
         if any(item.lower().endswith(ext) for ext in valid_extensions):
             image_files.append(item)
-        elif os.path.isdir(path):
+        elif recursive and os.path.isdir(path):
             # Support kohya-ss/sd-scripts folder structure
             repeat = 1
             if item.split("_")[0].isdigit():
@@ -100,7 +102,7 @@ class LoadImageDataSetFromFolderNode_Custom(io.ComfyNode):
                     default=0,
                     min=0,
                     max=sys.maxsize,
-                    control_after_generate=True,
+                    control_after_generate="fixed",
                     tooltip="Index of the first image to load (0-based). Files are sorted alphabetically.",
                 ),
                 io.Int.Input(
@@ -109,6 +111,11 @@ class LoadImageDataSetFromFolderNode_Custom(io.ComfyNode):
                     min=0,
                     max=sys.maxsize,
                     tooltip="Maximum number of images to load. Set to 0 to load all images.",
+                ),
+                io.Boolean.Input(
+                    "recursive",
+                    default=False,
+                    tooltip="If enabled, will traverse into subfolders.",
                 ),
             ],
             outputs=[
@@ -121,9 +128,9 @@ class LoadImageDataSetFromFolderNode_Custom(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, folder, start_index, max_items, folder_path):
+    def execute(cls, folder, start_index, max_items, folder_path, recursive):
         image_files, sub_input_dir = get_image_files_from_folder(
-            folder, start_index, max_items, folder_path
+            folder, start_index, max_items, folder_path, recursive
         )
         output_tensor = load_and_process_images(image_files, sub_input_dir)
         return io.NodeOutput(output_tensor)
@@ -152,7 +159,7 @@ class LoadImageTextDataSetFromFolderNode_Custom(io.ComfyNode):
                     default=0,
                     min=0,
                     max=sys.maxsize,
-                    control_after_generate=True,
+                    control_after_generate="fixed",
                     tooltip="Index of the first image to load (0-based). Files are sorted alphabetically.",
                 ),
                 io.Int.Input(
@@ -161,6 +168,11 @@ class LoadImageTextDataSetFromFolderNode_Custom(io.ComfyNode):
                     min=0,
                     max=sys.maxsize,
                     tooltip="Maximum number of images to load. Set to 0 to load all images.",
+                ),
+                io.Boolean.Input(
+                    "recursive",
+                    default=False,
+                    tooltip="If enabled, will traverse into subfolders.",
                 ),
             ],
             outputs=[
@@ -178,9 +190,9 @@ class LoadImageTextDataSetFromFolderNode_Custom(io.ComfyNode):
         )
 
     @classmethod
-    def execute(cls, folder, start_index, max_items, folder_path):
+    def execute(cls, folder, start_index, max_items, folder_path, recursive):
         image_files, sub_input_dir = get_image_files_from_folder(
-            folder, start_index, max_items, folder_path
+            folder, start_index, max_items, folder_path, recursive
         )
 
         caption_file_path = [

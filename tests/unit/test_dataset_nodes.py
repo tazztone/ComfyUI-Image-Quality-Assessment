@@ -114,11 +114,17 @@ class TestGetImageFiles:
         # It appends relative path "item/f" so "nested\\img3.webp" (win) or "nested/img3.webp" (linux)
 
         # We check simply that we got 3 images
-        assert len(files) == 3
+        # Default recursive=False, so only top level files (img1.png, img2.jpg)
+        assert len(files) == 2
         assert "img1.png" in files
         assert "img2.jpg" in files
-        # Check partial match for nested
-        assert any("img3.webp" in f for f in files)
+
+        # Test with recursive=True
+        files_rec, _ = get_image_files_from_folder(
+            folder_name, 0, 0, folder_path="", recursive=True
+        )
+        assert len(files_rec) == 3
+        assert any("img3.webp" in f for f in files_rec)
 
     def test_start_index(self, mock_filesystem):
         """Test skipping images."""
@@ -129,7 +135,8 @@ class TestGetImageFiles:
         files, _ = get_image_files_from_folder(folder_name, start_index=1, max_items=0)
 
         # Should skip first one
-        assert len(files) == 2
+        # Should skip first one. Total 2 files (non-recursive), so 1 left.
+        assert len(files) == 1
         assert "img1.png" not in files
 
     def test_max_items(self, mock_filesystem):
@@ -149,7 +156,7 @@ class TestGetImageFiles:
         # Should only find things in 'nested' (img3.webp)
         # NOTE: get_input_directory won't be called or used for base if folder_path provided
         files, used_path = get_image_files_from_folder(
-            "garbage", 0, 0, folder_path=str(override_path)
+            "garbage", 0, 0, folder_path=str(override_path), recursive=False
         )
 
         assert str(used_path) == str(override_path)
@@ -194,7 +201,7 @@ class TestLoadImageNodes:
         dataset_nodes.load_and_process_images = MagicMock(return_value="TENSOR_RESULT")
 
         try:
-            res = LoadImageDataSetNode.execute("my_images", 0, 0, "")
+            res = LoadImageDataSetNode.execute("my_images", 0, 0, "", recursive=True)
             # Expect NodeOutput wrapper which is a tuple
             assert res[0] == "TENSOR_RESULT"
 
@@ -220,7 +227,9 @@ class TestLoadImageNodes:
         try:
             # We assume alphabetically sorted: img1.png, img2.jpg, img3.webp
             # So index 0 is img1
-            res = LoadImageTextDataSetNode.execute("my_images", 0, 0, "")
+            res = LoadImageTextDataSetNode.execute(
+                "my_images", 0, 0, "", recursive=True
+            )
 
             # Output is (tensor, list_of_texts) inside NodeOutput
             # NodeOutput is a tuple
